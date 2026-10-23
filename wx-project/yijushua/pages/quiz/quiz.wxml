@@ -1,0 +1,524 @@
+<!--
+  刷题页结构
+  --------------------------------------------------
+  双层主题：浅色层 + 深色层（clip-path 圆形裁切）
+  主题切换从触摸点圆形扩散，与首页一致
+-->
+
+<!-- WXS 工具函数：支持多选题正确答案高亮 + 多选选中判断 -->
+<wxs module="qz">
+module.exports = {
+  isCorrectOpt: function(letter, correctAnswer) {
+    if (!correctAnswer) return false;
+    return correctAnswer.indexOf(letter) > -1;
+  },
+  isInArr: function(letter, arr) {
+    if (!arr || arr.length === 0) return false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] === letter) return true;
+    }
+    return false;
+  }
+};
+</wxs>
+
+<view class="quiz-container font-{{fontScale}}" style="background-color: {{darkMode ? '#1A1A2E' : ''}};">
+
+  <!-- ========== BGM 开关按钮（音符）—— 唱片本体，开启时自带旋转 ========== -->
+  <view class="bgm-toggle-btn {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <text class="bgm-toggle-icon">♪</text>
+  </view>
+
+  <!-- ========== 唱片杆（唱臂）：播放时落下搭在唱片上，停止时抬起 ========== -->
+  <view class="bgm-arm {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <view class="bgm-arm-weight"></view>
+    <view class="bgm-arm-rod"></view>
+    <view class="bgm-arm-head"></view>
+    <view class="bgm-arm-pivot"></view>
+  </view>
+
+  <!-- ========== 深色模式切换按钮 ========== -->
+  <view class="theme-toggle-btn" catchtap="onToggleTheme">
+    <text class="theme-icon">{{darkMode ? '🌙' : '☀️'}}</text>
+  </view>
+
+  <!-- ========== 浅色层（底层，可交互） ==========
+       照抄首页机制：浅色层永远不挂 dark 类 → 永远继承 .quiz-page 的日间变量
+       （--color-card/--color-text 等恒浅）。夜间变量定义在 .quiz-page.dark，
+       而只有深色层挂了 dark 类（class="quiz-page dark ... dark-layer"），
+       所以所有 .quiz-page.dark .xxx 规则天然只作用于深色层 —— 浅色层卡片在扩散
+       圆扫到之前永远是浅色，扩散扫到哪、深色层覆盖到哪、才变深。 -->
+  <view class="quiz-page theme-layer light-layer">
+
+    <!-- ========== 筛选条（普通模式） ========== -->
+    <view wx:if="{{quizMode === 'normal'}}" class="filter-bar">
+      <!-- 有科目筛选（随机刷题）：可点击展开 -->
+      <view wx:if="{{showSubjectFilter}}" class="filter-current" bindtap="onToggleFilter" hover-class="hover-row" hover-stay-time="100">
+        <text class="filter-icon">📖</text>
+        <text class="filter-text">{{selectedSubjectName}}</text>
+        <text class="filter-arrow {{showFilter ? 'arrow-up' : ''}}">›</text>
+      </view>
+      <!-- 无科目筛选（代码题/面试题）：仅显示静态标题 -->
+      <view wx:else class="filter-current">
+        <text class="filter-icon">📖</text>
+        <text class="filter-text">{{selectedSubjectName}}</text>
+      </view>
+      <!-- 离线缓存提示：当前题来自本地缓存，断网兜底 -->
+      <view wx:if="{{offlineMode}}" class="offline-badge">
+        <text class="offline-badge-icon">📴</text>
+        <text class="offline-badge-text">离线缓存</text>
+      </view>
+    </view>
+
+    <!-- ========== 复习模式标题 ========== -->
+    <view wx:if="{{quizMode !== 'normal'}}" class="filter-bar">
+      <view class="filter-current">
+        <text class="filter-text">{{quizMode === 'wrong' ? (quizType === 'code' ? '代码题·错题复习' : quizType === 'interview' ? '面试题·错题复习' : '错题复习') : quizMode === 'favorite' ? (quizType === 'code' ? '代码题·收藏复习' : quizType === 'interview' ? '面试题·收藏复习' : '收藏复习') : quizMode === 'customWrong' ? '自主题库·错题复习' : '自主题库·收藏复习'}}</text>
+      </view>
+    </view>
+
+    <!-- ========== 复习模式进度条 ========== -->
+    <view wx:if="{{quizMode !== 'normal' && reviewTotalNum > 0}}" class="quiz-progress">
+      <view class="progress-meta">第 <text class="progress-current">{{reviewCurrentNum}}</text> 题 / 共 {{reviewTotalNum}} 题</view>
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{reviewTotalNum ? (reviewCurrentNum * 100 / reviewTotalNum) : 0}}%;"></view>
+      </view>
+    </view>
+
+    <view wx:if="{{showFilter}}" class="filter-panel">
+      <!-- 科目筛选（仅随机刷题显示，代码题/面试题不分科目） -->
+      <view wx:if="{{showSubjectFilter}}" class="filter-section">
+        <text class="filter-label">科目</text>
+        <view class="filter-options">
+          <view
+            wx:for="{{subjects}}"
+            wx:key="id"
+            class="filter-pill {{selectedSubjectId === item.id ? 'pill-active' : ''}}"
+            data-id="{{item.id}}"
+            data-name="{{item.name}}"
+            bindtap="onSelectSubject"
+            hover-class="hover-pill"
+          >
+            {{item.name}}
+          </view>
+        </view>
+      </view>
+      <view class="filter-section">
+        <text class="filter-label">难度</text>
+        <view class="filter-options">
+          <view
+            wx:for="{{difficulties}}"
+            wx:key="value"
+            class="filter-pill {{selectedDifficulty === item.value ? 'pill-active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onSelectDifficulty"
+            hover-class="hover-pill"
+          >
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="loading-tip">
+      <text>正在加载题目...</text>
+    </view>
+
+    <!-- 加载失败提示（普通模式） -->
+    <view wx:if="{{!question && !loading && loadError && quizMode === 'normal'}}" class="loading-tip">
+      <text>加载失败，请检查网络</text>
+      <view class="retry-btn" bindtap="onRetryLoad" hover-class="hover-btn" hover-stay-time="100">重新加载</view>
+    </view>
+
+    <!-- 题库暂无题目（后端返回空，区别于网络错误） -->
+    <view wx:if="{{!question && !loading && emptyPool && quizMode === 'normal'}}" class="loading-tip">
+      <text class="empty-title">{{quizType === 'code' ? '代码题库暂无题目' : quizType === 'interview' ? '面试题库暂无题目' : '暂无题目'}}</text>
+      <text class="empty-hint-text">题目正在筹备中，敬请期待 📚</text>
+      <view class="retry-btn" bindtap="onRetryLoad" hover-class="hover-btn" hover-stay-time="100">重新加载</view>
+    </view>
+
+    <block wx:if="{{question && !loading}}">
+      <view class="question-header">
+        <view class="tags">
+          <text wx:if="{{quizType === 'code'}}" class="tag tag-type">代码题</text>
+          <text wx:if="{{quizType === 'interview'}}" class="tag tag-type">面试题</text>
+          <text wx:if="{{quizType === 'interview'}}" class="tag tag-source">{{question.source || '未知'}}</text>
+          <text wx:if="{{showSubjectFilter}}" class="tag tag-subject">{{question.subjectName || question.categoryName || '自定义'}}</text>
+          <text class="tag tag-difficulty">难度{{question.difficulty === 1 ? '·初' : question.difficulty === 2 ? '·中' : '·高'}}</text>
+          <text wx:if="{{isMultiChoice}}" class="tag tag-multi">多选题</text>
+        </view>
+        <view class="question-card">
+          <view class="question-content">{{question.content}}</view>
+        </view>
+      </view>
+
+      <view class="options js-entry-options" wx:if="{{quizType !== 'interview'}}">
+        <view
+          wx:for="{{options}}"
+          wx:key="keyId"
+          class="option-card {{
+            judged && qz.isCorrectOpt(item.letter, correctAnswer) ? 'opt-correct' :
+            judged && !isCorrect && (isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : (item.letter === selectedOption)) ? 'opt-wrong' :
+            !judged && (isMultiChoice ? qz.isInArr(item.letter, selectedOptions) : item.letter === selectedOption) ? 'opt-selected' : ''
+          }}"
+          style="animation-delay: {{index * 0.08}}s"
+          data-letter="{{item.letter}}"
+          bindtap="onOptionTap"
+          hover-class="{{!judged ? 'hover-card' : ''}}"
+        >
+          <text wx:if="{{isMultiChoice}}" class="multi-checkbox {{!judged && qz.isInArr(item.letter, selectedOptions) ? 'checked' : ''}}">{{!judged && qz.isInArr(item.letter, selectedOptions) ? '✓' : ''}}</text>
+          <text wx:else class="option-letter">{{item.letter}}</text>
+          <text class="option-text">{{item.text}}</text>
+          <text wx:if="{{judged && qz.isCorrectOpt(item.letter, correctAnswer)}}" class="option-icon">✓</text>
+          <text wx:elif="{{judged && !isCorrect && (isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : (item.letter === selectedOption))}}" class="option-icon">✗</text>
+        </view>
+      </view>
+
+      <!-- 面试题专属：问答题/OJ题模式，不显示选项，只提供"查看解析"按钮 -->
+      <view class="interview-actions" wx:if="{{quizType === 'interview' && !interviewRevealed}}">
+        <view class="interview-reveal-btn" bindtap="onShowInterviewExplanation" hover-class="hover-btn" hover-stay-time="100">
+          <text class="interview-reveal-icon">💡</text>
+          <text>查看解析</text>
+        </view>
+      </view>
+      <view class="feedback interview-feedback" wx:if="{{quizType === 'interview' && interviewRevealed}}">
+        <view class="explanation">
+          <text class="explanation-label">解析</text>
+          <text class="explanation-text">{{explanation}}</text>
+        </view>
+        <!-- 解析可能较长，底部提供收起入口，免去滚回顶部 -->
+        <view class="interview-actions">
+          <view class="interview-hide-btn" bindtap="onHideInterviewExplanation" hover-class="hover-btn" hover-stay-time="100">
+            <text class="interview-reveal-icon">▲</text>
+            <text>收起解析</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 多选题确认提交按钮 -->
+      <view wx:if="{{isMultiChoice && !judged}}" class="multi-submit-bar">
+        <text class="multi-hint">已选 {{selectedOptions.length}} 项</text>
+        <view class="multi-submit-btn {{selectedOptions.length === 0 ? 'btn-disabled' : ''}}" bindtap="onSubmitMulti" hover-class="{{selectedOptions.length > 0 ? 'hover-btn' : ''}}" hover-stay-time="100">确认提交</view>
+      </view>
+
+      <view wx:if="{{judged}}" class="feedback">
+        <view class="result-bar {{isCorrect ? 'result-correct' : 'result-wrong'}}">
+          <text class="result-icon">{{isCorrect ? '✓' : '✗'}}</text>
+          <text wx:if="{{isCorrect}}">答对了！</text>
+          <text wx:else>答错了，正确答案是 {{correctAnswer}}</text>
+          <text wx:if="{{isCorrect && autoNext && countdown > 0}}" class="countdown-tag">{{countdown}}秒后下一题</text>
+        </view>
+        <view class="explanation">
+          <text class="explanation-label">解析</text>
+          <text class="explanation-text">{{explanation}}</text>
+        </view>
+        <view wx:if="{{isCorrect && (quizMode === 'wrong' || quizMode === 'customWrong')}}" class="remove-wrong-bar">
+          <view class="remove-wrong-btn" bindtap="onRemoveWrongTap" hover-class="hover-btn" hover-stay-time="100">
+            <text class="remove-wrong-icon">🗑</text>
+            <text>从错题本移除</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="bottom-bar">
+        <view wx:if="{{hasHistory}}" class="prev-btn" bindtap="onPrevTap" hover-class="hover-btn" hover-stay-time="100">
+          上一题
+        </view>
+        <view class="favorite-btn {{question.isFavorited ? 'favorited' : ''}}" bindtap="onFavoriteTap" hover-class="hover-btn" hover-stay-time="100">
+          <text>{{question.isFavorited ? '★' : '☆'}}</text>
+        </view>
+        <view
+          wx:if="{{quizType === 'interview' || (judged && (!isCorrect || !autoNext || fromHistory))}}"
+          class="next-btn"
+          bindtap="onNextTap"
+          hover-class="hover-btn"
+          hover-stay-time="100"
+        >
+          下一题
+        </view>
+        <view
+          wx:if="{{judged && isCorrect && autoNext && countdown > 0 && !fromHistory}}"
+          class="next-btn next-btn-skip"
+          bindtap="onNextTap"
+          hover-class="hover-btn"
+          hover-stay-time="100"
+        >
+          立即下一题
+        </view>
+      </view>
+
+      <view class="quiz-tip-bar">
+        <text class="quiz-tip-text">小提示：可在"我的—设置"更改刷题设置</text>
+      </view>
+    </block>
+
+  </view>
+
+  <!-- ========== 深色层（顶层，圆形裁切，纯视觉） ==========
+       性能优化：dark-layer 常驻 DOM，用 visibility 而非 wx:if 控制显隐。
+       wx:if 会在每次切换时创建/销毁大量 DOM 子树（含题干、选项、解析等数据绑定），
+       单次耗时 50-200ms，是中低端机型卡顿主因。
+       visibility:hidden 不触发 layout，浏览器仅跳过绘制，节点常驻内存。 -->
+  <view class="quiz-page dark theme-layer dark-layer {{clipNoTransition ? 'no-transition' : ''}} {{darkLayerVisible ? '' : 'dark-layer-hidden'}} {{themeAnimating ? 'theme-animating' : ''}}"
+        style="clip-path: {{darkClipPath}}; -webkit-clip-path: {{darkClipPath}};">
+
+    <!-- 筛选条（普通模式） -->
+    <view wx:if="{{quizMode === 'normal'}}" class="filter-bar">
+      <!-- 有科目筛选（随机刷题）：可点击展开 -->
+      <view wx:if="{{showSubjectFilter}}" class="filter-current" bindtap="onToggleFilter" hover-class="hover-row" hover-stay-time="100">
+        <text class="filter-icon">📖</text>
+        <text class="filter-text">{{selectedSubjectName}}</text>
+        <text class="filter-arrow {{showFilter ? 'arrow-up' : ''}}">›</text>
+      </view>
+      <!-- 无科目筛选（代码题/面试题）：仅显示静态标题 -->
+      <view wx:else class="filter-current">
+        <text class="filter-icon">📖</text>
+        <text class="filter-text">{{selectedSubjectName}}</text>
+      </view>
+      <!-- 离线缓存提示：当前题来自本地缓存，断网兜底 -->
+      <view wx:if="{{offlineMode}}" class="offline-badge">
+        <text class="offline-badge-icon">📴</text>
+        <text class="offline-badge-text">离线缓存</text>
+      </view>
+    </view>
+
+    <!-- 复习模式标题 -->
+    <view wx:if="{{quizMode !== 'normal'}}" class="filter-bar">
+      <view class="filter-current">
+        <text class="filter-text">{{quizMode === 'wrong' ? (quizType === 'code' ? '代码题·错题复习' : quizType === 'interview' ? '面试题·错题复习' : '错题复习') : quizMode === 'favorite' ? (quizType === 'code' ? '代码题·收藏复习' : quizType === 'interview' ? '面试题·收藏复习' : '收藏复习') : quizMode === 'customWrong' ? '自主题库·错题复习' : '自主题库·收藏复习'}}</text>
+      </view>
+    </view>
+
+    <!-- 复习模式进度条（深色层镜像） -->
+    <view wx:if="{{quizMode !== 'normal' && reviewTotalNum > 0}}" class="quiz-progress">
+      <view class="progress-meta">第 <text class="progress-current">{{reviewCurrentNum}}</text> 题 / 共 {{reviewTotalNum}} 题</view>
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{reviewTotalNum ? (reviewCurrentNum * 100 / reviewTotalNum) : 0}}%;"></view>
+      </view>
+    </view>
+
+    <view wx:if="{{showFilter && quizMode === 'normal'}}" class="filter-panel">
+      <!-- 科目筛选（仅随机刷题显示，代码题/面试题不分科目） -->
+      <view wx:if="{{showSubjectFilter}}" class="filter-section">
+        <text class="filter-label">科目</text>
+        <view class="filter-options">
+          <view
+            wx:for="{{subjects}}"
+            wx:key="id"
+            class="filter-pill {{selectedSubjectId === item.id ? 'pill-active' : ''}}"
+          >
+            {{item.name}}
+          </view>
+        </view>
+      </view>
+      <view class="filter-section">
+        <text class="filter-label">难度</text>
+        <view class="filter-options">
+          <view
+            wx:for="{{difficulties}}"
+            wx:key="value"
+            class="filter-pill {{selectedDifficulty === item.value ? 'pill-active' : ''}}"
+          >
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="loading-tip">
+      <text>正在加载题目...</text>
+    </view>
+
+    <!-- 加载失败提示（普通模式，深色层） -->
+    <view wx:if="{{!question && !loading && loadError && quizMode === 'normal'}}" class="loading-tip">
+      <text>加载失败，请检查网络</text>
+      <view class="retry-btn">重新加载</view>
+    </view>
+
+    <!-- 题库暂无题目（后端返回空，深色层） -->
+    <view wx:if="{{!question && !loading && emptyPool && quizMode === 'normal'}}" class="loading-tip">
+      <text class="empty-title">{{quizType === 'code' ? '代码题库暂无题目' : quizType === 'interview' ? '面试题库暂无题目' : '暂无题目'}}</text>
+      <text class="empty-hint-text">题目正在筹备中，敬请期待 📚</text>
+      <view class="retry-btn">重新加载</view>
+    </view>
+
+    <block wx:if="{{question && !loading}}">
+      <view class="question-header">
+        <view class="tags">
+          <text wx:if="{{quizType === 'code'}}" class="tag tag-type">代码题</text>
+          <text wx:if="{{quizType === 'interview'}}" class="tag tag-type">面试题</text>
+          <text wx:if="{{quizType === 'interview'}}" class="tag tag-source">{{question.source || '未知'}}</text>
+          <text wx:if="{{showSubjectFilter}}" class="tag tag-subject">{{question.subjectName || question.categoryName || '自定义'}}</text>
+          <text class="tag tag-difficulty">难度{{question.difficulty === 1 ? '·初' : question.difficulty === 2 ? '·中' : '·高'}}</text>
+          <text wx:if="{{isMultiChoice}}" class="tag tag-multi">多选题</text>
+        </view>
+        <view class="question-card">
+          <view class="question-content">{{question.content}}</view>
+        </view>
+      </view>
+
+      <view class="options" wx:if="{{quizType !== 'interview'}}">
+        <view
+          wx:for="{{options}}"
+          wx:key="keyId"
+          class="option-card {{
+            judged && qz.isCorrectOpt(item.letter, correctAnswer) ? 'opt-correct' :
+            judged && !isCorrect && (isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : (item.letter === selectedOption)) ? 'opt-wrong' :
+            !judged && (isMultiChoice ? qz.isInArr(item.letter, selectedOptions) : item.letter === selectedOption) ? 'opt-selected' : ''
+          }} {{pressedOption === item.letter && !judged ? 'hover-card' : ''}}"
+        >
+          <text wx:if="{{isMultiChoice}}" class="multi-checkbox {{!judged && qz.isInArr(item.letter, selectedOptions) ? 'checked' : ''}}">{{!judged && qz.isInArr(item.letter, selectedOptions) ? '✓' : ''}}</text>
+          <text wx:else class="option-letter">{{item.letter}}</text>
+          <text class="option-text">{{item.text}}</text>
+          <text wx:if="{{judged && qz.isCorrectOpt(item.letter, correctAnswer)}}" class="option-icon">✓</text>
+          <text wx:elif="{{judged && !isCorrect && (isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : (item.letter === selectedOption))}}" class="option-icon">✗</text>
+        </view>
+      </view>
+
+      <!-- 面试题专属：问答题/OJ题模式，不显示选项，只提供"查看解析"按钮（深色层） -->
+      <view class="interview-actions" wx:if="{{quizType === 'interview' && !interviewRevealed}}">
+        <view class="interview-reveal-btn">
+          <text class="interview-reveal-icon">💡</text>
+          <text>查看解析</text>
+        </view>
+      </view>
+      <view class="feedback interview-feedback" wx:if="{{quizType === 'interview' && interviewRevealed}}">
+        <view class="explanation">
+          <text class="explanation-label">解析</text>
+          <text class="explanation-text">{{explanation}}</text>
+        </view>
+        <!-- 深色层为纯视觉层（pointer-events: none），点击穿透到浅色层对应按钮 -->
+        <view class="interview-actions">
+          <view class="interview-hide-btn">
+            <text class="interview-reveal-icon">▲</text>
+            <text>收起解析</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 多选题确认提交按钮 -->
+      <view wx:if="{{isMultiChoice && !judged}}" class="multi-submit-bar">
+        <text class="multi-hint">已选 {{selectedOptions.length}} 项</text>
+        <view class="multi-submit-btn {{selectedOptions.length === 0 ? 'btn-disabled' : ''}}">确认提交</view>
+      </view>
+
+      <view wx:if="{{judged}}" class="feedback">
+        <view class="result-bar {{isCorrect ? 'result-correct' : 'result-wrong'}}">
+          <text class="result-icon">{{isCorrect ? '✓' : '✗'}}</text>
+          <text wx:if="{{isCorrect}}">答对了！</text>
+          <text wx:else>答错了，正确答案是 {{correctAnswer}}</text>
+          <text wx:if="{{isCorrect && autoNext && countdown > 0}}" class="countdown-tag">{{countdown}}秒后下一题</text>
+        </view>
+        <view class="explanation">
+          <text class="explanation-label">解析</text>
+          <text class="explanation-text">{{explanation}}</text>
+        </view>
+        <view wx:if="{{isCorrect && (quizMode === 'wrong' || quizMode === 'customWrong')}}" class="remove-wrong-bar">
+          <view class="remove-wrong-btn" bindtap="onRemoveWrongTap" hover-class="hover-btn" hover-stay-time="100">
+            <text class="remove-wrong-icon">🗑</text>
+            <text>从错题本移除</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="bottom-bar">
+        <view wx:if="{{hasHistory}}" class="prev-btn">上一题</view>
+        <view class="favorite-btn {{question.isFavorited ? 'favorited' : ''}}">
+          <text>{{question.isFavorited ? '★' : '☆'}}</text>
+        </view>
+        <view wx:if="{{quizType === 'interview' || (judged && (!isCorrect || !autoNext || fromHistory))}}" class="next-btn">下一题</view>
+        <view wx:if="{{judged && isCorrect && autoNext && countdown > 0 && !fromHistory}}" class="next-btn next-btn-skip">立即下一题</view>
+      </view>
+
+      <view class="quiz-tip-bar">
+        <text class="quiz-tip-text">小提示：可在"我的—设置"更改刷题设置</text>
+      </view>
+    </block>
+
+  </view>
+
+  <!-- ========== 答对粒子爆开（独立 overlay，不受双层主题影响） ========== -->
+  <view class="particle-overlay" wx:if="{{showParticles}}">
+    <view class="particle-burst">
+      <view class="particle-ring"></view>
+      <view class="particle-ring particle-ring-2"></view>
+      <view
+        wx:for="{{particles}}"
+        wx:key="id"
+        class="particle"
+        style="--angle: {{item.angle}}deg; --distance: {{item.distance}}rpx; --delay: {{item.delay}}s; width: {{item.size}}rpx; height: {{item.size}}rpx; background: {{item.color}};"
+      ></view>
+    </view>
+  </view>
+
+  <!-- ============================================================
+       新手引导 · 第三步气泡（高亮选项区）
+       - 独立 overlay，置于双层主题之上，不受主题切换影响
+       - Spotlight 通过 box-shadow 投射暗影镂空高亮选项区
+       - 气泡给出标题 / 描述 / 操作预期 / 进度 / 主按钮
+       ============================================================ -->
+  <view wx:if="{{onboardingStep}}"
+        class="ob-mask {{onboardingClosing ? 'closing' : ''}} {{darkMode ? 'dark' : ''}}">
+
+    <view wx:if="{{onboardingSpotlight}}"
+          class="ob-spotlight"
+          style="left:{{onboardingSpotlight.left}}px;top:{{onboardingSpotlight.top}}px;width:{{onboardingSpotlight.width}}px;height:{{onboardingSpotlight.height}}px;">
+    </view>
+
+    <view class="ob-bubble-wrap {{onboardingSpotlight ? 'with-target' : 'centered'}}">
+      <view class="ob-bubble">
+
+        <view class="ob-bubble-head">
+          <view class="ob-bubble-orb ob-bubble-orb-a"></view>
+          <view class="ob-bubble-orb ob-bubble-orb-b"></view>
+          <text class="ob-bubble-step">{{onboardingStepIndex + 1}} / {{onboardingTotal}}</text>
+          <text class="ob-bubble-icon">{{onboardingStep.icon}}</text>
+        </view>
+
+        <text class="ob-bubble-title">{{onboardingStep.title}}</text>
+        <text class="ob-bubble-desc">{{onboardingStep.desc}}</text>
+        <view wx:if="{{onboardingStep.expectation}}" class="ob-bubble-expect">
+          <text class="ob-bubble-expect-icon">→</text>
+          <text class="ob-bubble-expect-text">{{onboardingStep.expectation}}</text>
+        </view>
+
+        <view class="ob-bubble-progress">
+          <view class="ob-bubble-progress-bar" style="width:{{(onboardingStepIndex + 1) * 100 / onboardingTotal}}%;"></view>
+        </view>
+
+        <view class="ob-bubble-actions">
+          <view class="ob-bubble-primary" catchtap="onOnboardingPrimary">{{onboardingStep.primaryText}}</view>
+        </view>
+
+      </view>
+    </view>
+
+  </view>
+
+  <!-- ========== 专项复习：刷完提示 ========== -->
+  <view wx:if="{{reviewFinished}}" class="review-done-mask">
+    <view class="review-done-card">
+      <text class="review-done-icon">🎉</text>
+      <text class="review-done-title">{{quizMode === 'wrong' || quizMode === 'customWrong' ? '错题已全部刷完！' : '收藏题已全部刷完！'}}</text>
+      <text class="review-done-desc">再来一轮或返回首页</text>
+      <view class="review-done-btns">
+        <view class="review-done-btn" bindtap="onRestartReview" hover-class="hover-btn" hover-stay-time="100">再来一轮</view>
+        <view class="review-done-btn review-done-back" bindtap="onBackHome" hover-class="hover-btn" hover-stay-time="100">返回</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 普通随机刷题：本轮刷完提示 ========== -->
+  <view wx:if="{{poolFinished}}" class="review-done-mask">
+    <view class="review-done-card">
+      <text class="review-done-icon">✅</text>
+      <text class="review-done-title">题目已全部刷完！</text>
+      <text class="review-done-desc">已刷 {{answeredCount}} 题，要不要再来一轮？</text>
+      <view class="review-done-btns">
+        <view class="review-done-btn" bindtap="onRestartPool" hover-class="hover-btn" hover-stay-time="100">再来一轮</view>
+        <view class="review-done-btn review-done-back" bindtap="onPoolBackHome" hover-class="hover-btn" hover-stay-time="100">返回</view>
+      </view>
+    </view>
+  </view>
+
+</view>

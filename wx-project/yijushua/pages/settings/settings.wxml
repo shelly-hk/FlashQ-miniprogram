@@ -1,0 +1,178 @@
+<!--
+  设置页面
+  --------------------------------------------------
+  功能：
+    1. 答题自动跳转开关
+    2. 清除缓存
+    3. 关于
+-->
+
+<!-- 根节点不带入场淡入动画：opacity 从 0 起会让整页（含背景）变透明，
+     深色模式下透出 WebView 白底，就是那种很强的"闪白"（与学习报告页保持一致） -->
+<view class="settings-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ========== 答题设置 ========== -->
+  <view class="section-title">答题设置</view>
+  <view class="settings-group">
+    <view class="settings-item">
+      <view class="settings-item-left">
+        <text class="settings-icon">⚡</text>
+        <view class="settings-item-text">
+          <text class="settings-label">答对自动下一题</text>
+          <text class="settings-desc">答对后自动跳转，无需手动点击</text>
+        </view>
+      </view>
+      <switch checked="{{autoNext}}" bindchange="onAutoNextChange" color="#3D6B7E" />
+    </view>
+
+    <view class="settings-item">
+      <view class="settings-item-left">
+        <text class="settings-icon">🔊</text>
+        <view class="settings-item-text">
+          <text class="settings-label">答题音效</text>
+          <text class="settings-desc">答对/答错时播放音效反馈</text>
+        </view>
+      </view>
+      <switch checked="{{soundEnabled}}" bindchange="onSoundChange" color="#3D6B7E" />
+    </view>
+
+    <!-- 刷题音效音量（开启答题音效时显示） -->
+    <view wx:if="{{soundEnabled}}" class="settings-item slider-row">
+      <view class="settings-item-left">
+        <text class="settings-icon">🔉</text>
+        <view class="settings-item-text">
+          <text class="settings-label">刷题音效音量</text>
+          <text class="settings-desc">当前 {{sfxVolumePercent}}%</text>
+        </view>
+      </view>
+      <slider class="settings-slider" min="0" max="100" value="{{sfxVolumePercent}}"
+              bindchange="onSfxVolumeChange" block-size="20" activeColor="#3D6B7E" />
+    </view>
+
+    <!-- 停留时间选择（仅开启自动跳转时显示） -->
+    <view wx:if="{{autoNext}}" class="settings-item delay-row">
+      <view class="settings-item-left">
+        <text class="settings-icon">⏱</text>
+        <view class="settings-item-text">
+          <text class="settings-label">答对后停留时间</text>
+          <text class="settings-desc">答对后等待几秒再跳转下一题</text>
+        </view>
+      </view>
+      <view class="delay-pills">
+        <view
+          wx:for="{{delayOptions}}"
+          wx:key="value"
+          class="delay-pill {{autoNextDelay === item.value ? 'pill-active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onDelayChange"
+          hover-class="hover-pill"
+        >
+          {{item.label}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 背景音乐 ========== -->
+  <view class="section-title">背景音乐</view>
+  <view class="settings-group">
+
+    <!-- 背景音乐音量 -->
+    <view class="settings-item slider-row">
+      <view class="settings-item-left">
+        <text class="settings-icon settings-icon-music">♪</text>
+        <view class="settings-item-text">
+          <text class="settings-label">背景音乐音量</text>
+          <text class="settings-desc">当前 {{bgmVolumePercent}}%</text>
+        </view>
+      </view>
+      <slider class="settings-slider" min="0" max="100" value="{{bgmVolumePercent}}"
+              bindchange="onBgmVolumeChange" block-size="20" activeColor="#3D6B7E" />
+    </view>
+
+    <!-- 选择背景音乐（点击展开 / 收起） -->
+    <view class="settings-item bgm-header" bindtap="onToggleExpand" hover-class="hover-row" hover-stay-time="80">
+      <view class="settings-item-left">
+        <text class="settings-icon settings-icon-music">♫</text>
+        <view class="settings-item-text">
+          <text class="settings-label">选择背景音乐</text>
+          <text class="settings-desc">从深色曲目中随机播放，点击切换</text>
+        </view>
+      </view>
+      <text class="bgm-arrow {{bgmExpanded ? 'bgm-arrow-up' : ''}}">›</text>
+    </view>
+
+    <!-- BGM 选项列表（默认收起，展开后显示） -->
+    <view wx:if="{{bgmExpanded}}" class="bgm-list">
+      <!-- 随机播放（固定深色，不可更改） -->
+      <view class="bgm-item bgm-item-active bgm-item-locked">
+        <text class="bgm-name">🔀 随机播放</text>
+        <text class="bgm-lock">🔒</text>
+      </view>
+      <!-- 各 BGM（深色=已选并随机播放，浅色=未选不播放） -->
+      <view wx:for="{{bgmList}}" wx:key="id"
+            class="bgm-item {{item.selected ? 'bgm-item-active' : ''}}"
+            data-id="{{item.id}}" bindtap="onToggleBgmItem" hover-class="hover-pill" hover-stay-time="80">
+        <text class="bgm-name">{{item.label}}</text>
+        <view class="bgm-actions">
+          <text class="bgm-preview {{previewingId === item.id ? 'previewing' : ''}}"
+                catchtap="onPreviewBgm" data-id="{{item.id}}">{{previewingId === item.id ? '停止' : '试听'}}</text>
+          <text class="bgm-dot {{item.selected ? 'dot-on' : ''}}">{{item.selected ? '✓' : ''}}</text>
+        </view>
+      </view>
+    </view>
+
+  </view>
+
+  <!-- ========== 显示与无障碍 ========== -->
+  <view class="section-title">显示与无障碍</view>
+  <view class="settings-group">
+    <!-- 字号选择（适老化 / 无障碍） -->
+    <view class="settings-item font-scale-row">
+      <view class="settings-item-left">
+        <text class="settings-icon">🔍</text>
+        <view class="settings-item-text">
+          <text class="settings-label">字号</text>
+          <text class="settings-desc">适老化设计，照顾不同视力用户</text>
+        </view>
+      </view>
+      <view class="font-scale-pills">
+        <view
+          wx:for="{{fontOptions}}"
+          wx:key="value"
+          class="font-scale-pill {{fontScale === item.value ? 'pill-active' : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onFontScaleChange"
+          hover-class="hover-pill"
+          hover-stay-time="80"
+        >
+          <text class="font-scale-letter {{fontScale === item.value ? 'letter-active' : (item.value === 'large' ? 'letter-large' : (item.value === 'small' ? 'letter-small' : ''))}}">A</text>
+          <text class="font-scale-label">{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 通用设置 ========== -->
+  <view class="section-title">通用</view>
+  <view class="settings-group">
+    <view class="settings-item" bindtap="onClearCache" hover-class="hover-row" hover-stay-time="100">
+      <view class="settings-item-left">
+        <text class="settings-icon">🗑</text>
+        <text class="settings-label">清除缓存</text>
+      </view>
+      <text class="settings-value">{{cacheSize}}</text>
+    </view>
+    <view class="settings-item" bindtap="onAboutTap" hover-class="hover-row" hover-stay-time="100">
+      <view class="settings-item-left">
+        <text class="settings-icon">ℹ️</text>
+        <text class="settings-label">关于</text>
+      </view>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- ========== 当前版本 ========== -->
+  <view class="version-info">一句刷 v1.3.1</view>
+
+</view>

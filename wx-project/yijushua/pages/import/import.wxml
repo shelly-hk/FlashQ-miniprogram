@@ -1,0 +1,149 @@
+<!--
+  导入题目页
+  --------------------------------------------------
+  功能：
+    1. 展示题目格式规范说明（可复制给其他平台AI）
+    2. 选择导入的分类
+    3. 上传文档 或 粘贴文本（按格式规范编写）
+    4. 后端直接解析入库，不走AI，即时完成
+-->
+
+<view class="import-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ========== 格式规范说明（默认收起） ========== -->
+  <view class="spec-card">
+    <view class="spec-header" bindtap="onToggleSpec" hover-class="hover-card" hover-stay-time="100">
+      <view class="spec-header-left">
+        <text class="spec-title">题目格式规范</text>
+        <text class="spec-hint">点击{{specExpanded ? '收起' : '展开'}}</text>
+      </view>
+      <view class="spec-header-right">
+        <view wx:if="{{specExpanded}}" class="copy-btn" catchtap="onCopySpec" hover-class="hover-card" hover-stay-time="100">
+          <text class="copy-icon">📋</text>
+          <text class="copy-text">复制</text>
+        </view>
+        <text class="spec-arrow {{specExpanded ? 'spec-arrow-up' : ''}}">›</text>
+      </view>
+    </view>
+    <view wx:if="{{specExpanded}}" class="spec-body">
+      <text class="spec-content">{{formatSpec}}</text>
+    </view>
+    <view wx:if="{{specExpanded}}" class="spec-example-block">
+      <text class="spec-example-title">格式示例：</text>
+      <text class="spec-example-text">题干：什么是高质量发展的核心要义？</text>
+      <text class="spec-example-text">A.创新驱动</text>
+      <text class="spec-example-text">B.规模扩张</text>
+      <text class="spec-example-text">C.速度优先</text>
+      <text class="spec-example-text">D.资源消耗</text>
+      <text class="spec-example-text">答案：A</text>
+      <text class="spec-example-text">解析：高质量发展核心是创新驱动</text>
+      <text class="spec-example-text">难度：中</text>
+    </view>
+  </view>
+
+  <!-- ========== 操作提示 ========== -->
+  <view wx:if="{{!importing && !importResult && !showTextInput}}" class="action-section">
+    <!-- 分类选择 -->
+    <view class="category-row" bindtap="onSelectCategory" hover-class="hover-card" hover-stay-time="100">
+      <text class="cat-label">导入到分类</text>
+      <view class="cat-value">
+        <text class="cat-name">{{selectedCategory ? selectedCategory.name : '默认（其他）'}}</text>
+        <text class="cat-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="import-actions">
+      <view class="import-option" bindtap="onChooseFile" hover-class="hover-card" hover-stay-time="100">
+        <view class="import-icon">📄</view>
+        <view class="import-text">
+          <text class="import-label">上传文档</text>
+          <text class="import-desc">pdf / doc / docx / txt，最大 1MB</text>
+        </view>
+      </view>
+      <view class="import-option" bindtap="onShowTextInput" hover-class="hover-card" hover-stay-time="100">
+        <view class="import-icon">📝</view>
+        <view class="import-text">
+          <text class="import-label">粘贴文本</text>
+          <text class="import-desc">直接粘贴按规范编写的题目文本</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作说明 -->
+    <view class="import-tips">
+      <view class="tip-title">如何使用导入题目？</view>
+      <view class="tip-item">1. 点击"复制"将格式规范复制到剪贴板</view>
+      <view class="tip-item">2. 将规范发给其他平台的AI（如ChatGPT、豆包等）</view>
+      <view class="tip-item">3. 让AI按规范生成题目文档或直接输出题目文本</view>
+      <view class="tip-item">4. 回到此处，上传文档或粘贴文本即可一键导入</view>
+      <view class="tip-item">5. 导入的题目即时生效，可在自主题库中刷题</view>
+      <view class="tip-item tip-note">提示：已有的题库也可让AI改成规范格式后再导入</view>
+    </view>
+  </view>
+
+  <!-- ========== 粘贴文本输入区域 ========== -->
+  <view wx:if="{{!importing && !importResult && showTextInput}}" class="text-input-area">
+    <view class="text-input-header">
+      <text class="text-input-title">粘贴题目文本</text>
+      <text class="text-input-close" bindtap="onCloseTextInput">✕</text>
+    </view>
+    <view class="text-input-submit-bar">
+      <text class="text-input-count">{{textInputValue.length}} / 50000</text>
+      <view class="text-input-btn {{textInputValue ? '' : 'btn-disabled'}}" bindtap="onSubmitText" hover-class="hover-btn" hover-stay-time="100">导入题目</view>
+    </view>
+    <textarea
+      class="text-input-box"
+      placeholder="粘贴按格式规范编写的题目文本..."
+      placeholder-class="text-input-placeholder"
+      value="{{textInputValue}}"
+      bindinput="onTextInput"
+      maxlength="50000"
+      auto-height
+      style="min-height: 300rpx;"
+    ></textarea>
+  </view>
+
+  <!-- ========== 导入中 ========== -->
+  <view wx:if="{{importing}}" class="status-card">
+    <view class="loading-dots">
+      <view class="dot"></view>
+      <view class="dot"></view>
+      <view class="dot"></view>
+    </view>
+    <text class="status-text">正在导入题目...</text>
+    <text class="status-hint">请稍候，正在解析并写入题库</text>
+  </view>
+
+  <!-- ========== 导入结果 ========== -->
+  <view wx:if="{{!importing && importResult}}" class="result-card">
+    <view class="result-icon {{importResult.failed > 0 ? 'result-icon-warn' : ''}}">{{importResult.failed > 0 ? '!' : '✓'}}</view>
+    <text class="result-title">{{importResult.failed > 0 ? '部分导入成功' : '导入成功'}}</text>
+    <text class="result-count">成功 {{importResult.imported}} 道{{importResult.failed > 0 ? '，失败 ' + importResult.failed + ' 道' : ''}}</text>
+
+    <!-- 失败详情 -->
+    <view wx:if="{{importResult.failed > 0 && importResult.errors}}" class="result-errors">
+      <view class="result-error-title">失败原因：</view>
+      <view wx:for="{{importResult.errors}}" wx:key="index" class="result-error-item">{{item}}</view>
+    </view>
+
+    <view class="result-actions">
+      <view class="btn-primary" bindtap="onClearResult" hover-class="hover-btn" hover-stay-time="100">继续导入</view>
+    </view>
+  </view>
+
+  <!-- ========== 隐私授权弹窗 ========== -->
+  <view wx:if="{{showPrivacy}}" class="privacy-mask">
+    <view class="privacy-card">
+      <view class="privacy-title">隐私保护提示</view>
+      <view class="privacy-desc">
+        在使用导入功能前，请仔细阅读<text class="privacy-link" bindtap="onOpenPrivacyContract">《用户隐私保护指引》</text>。上传的文件仅用于导入题目，不会用于其他用途。
+      </view>
+      <view class="privacy-buttons">
+        <view class="privacy-btn-disagree" bindtap="handleDisagreePrivacy">拒绝</view>
+        <button id="agree-btn" class="privacy-btn-agree" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="handleAgreePrivacy">同意并继续</button>
+      </view>
+    </view>
+  </view>
+
+</view>

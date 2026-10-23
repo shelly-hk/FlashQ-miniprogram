@@ -1,0 +1,283 @@
+<!--
+  排行榜页面（双层主题切换）
+  --------------------------------------------------
+  布局：前三名领奖台 → 常规排名列表 → 底部固定"我的排名"
+-->
+
+<!-- 滑动预览层（目标页面背景色） -->
+<view wx:if="{{swipePeekVisible}}" class="swipe-peek {{swipeAnimating ? 'swipe-peek-anim' : ''}}"
+  style="background:{{swipePeekColor}};transform:translateX({{swipePeekOffset}}px);"></view>
+
+<view class="rank-container {{swipeAnimating ? 'swipe-animating' : ''}} font-{{fontScale}}"
+  style="transform: translateX({{swipeOffset}}px); background-color: {{darkMode ? '#1a1a1a' : ''}};"
+  bindtouchstart="onSwipeStart"
+  bindtouchmove="onSwipeMove"
+  bindtouchend="onSwipeEnd"
+  bindtouchcancel="onSwipeCancel">
+
+  <!-- ========== BGM 开关按钮（音符）—— 唱片本体，开启时自带旋转 ========== -->
+  <view class="bgm-toggle-btn {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <text class="bgm-toggle-icon">♪</text>
+  </view>
+
+  <!-- ========== 唱片杆（唱臂）：播放时落下搭在唱片上，停止时抬起 ========== -->
+  <view class="bgm-arm {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <view class="bgm-arm-weight"></view>
+    <view class="bgm-arm-rod"></view>
+    <view class="bgm-arm-head"></view>
+    <view class="bgm-arm-pivot"></view>
+  </view>
+
+  <!-- ========== 深色模式切换按钮（日/夜光晕锚点） ========== -->
+  <view class="theme-toggle-btn {{darkMode ? 'is-night' : ''}}" catchtap="onToggleTheme">
+    <text class="theme-icon">{{darkMode ? '🌙' : '☀️'}}</text>
+  </view>
+
+  <!-- ========== 浅色层（底层，可交互） ==========
+       照抄首页机制：浅色层永远不挂 dark 类 → 永远继承 .rank-page 的日间变量
+       （--color-card/--color-text 等恒浅）。夜间变量定义在 .rank-page.dark，
+       而只有深色层挂了 dark 类（class="rank-page dark ... dark-layer"），
+       所以所有 .rank-page.dark .xxx 规则天然只作用于深色层 —— 浅色层卡片在扩散
+       圆扫到之前永远是浅色，扩散扫到哪、深色层覆盖到哪、才变深。
+       注意：底部栏 .rank-bottom-bar 是 position:fixed，跳出深色层 clip-path 裁剪，
+       已单独绑定 {{darkMode ? 'dark' : ''}} 并用 .rank-bottom-bar.dark 选择器独立切换，
+       不依赖 .rank-page.dark 父选择器，本改造不影响它。 -->
+  <view class="rank-page theme-layer light-layer {{themeAnimating ? 'theme-animating' : ''}}">
+
+    <!-- 加载中 -->
+    <view wx:if="{{loading}}" class="loading-tip"><text>加载中...</text></view>
+
+    <!-- 排行榜内容 -->
+    <block wx:if="{{!loading}}">
+      <view wx:if="{{rankList.length >= 1}}" class="podium">
+        <!-- 舞台天光：日光/月光光束 + 白云（日间）/ 薄雾+星空（夜间） -->
+        <view class="podium-sky">
+          <view class="light-beam beam-1"></view>
+          <view class="light-beam beam-2"></view>
+          <view class="cloud cloud-1"></view>
+          <view class="cloud cloud-2"></view>
+          <view class="cloud cloud-3"></view>
+          <view class="cloud cloud-4"></view>
+          <view class="star s1"></view>
+          <view class="star s2"></view>
+          <view class="star s3"></view>
+          <view class="star s4"></view>
+          <view class="star s5"></view>
+          <view class="star s6"></view>
+          <view class="star s7"></view>
+          <view class="star s8"></view>
+          <view class="star s9"></view>
+          <view class="star s10"></view>
+          <view class="star s11"></view>
+          <view class="star s12"></view>
+          <text class="star-spark sp1">✦</text>
+          <text class="star-spark sp2">✦</text>
+          <text class="star-spark sp3">✦</text>
+          <text class="star-spark sp4">✦</text>
+        </view>
+        <view wx:if="{{rankList.length >= 2}}" class="podium-item rank-2">
+          <view class="podium-avatar">
+            <image wx:if="{{rankList[1].avatar}}" class="podium-avatar-img" src="{{rankList[1].avatar}}" mode="aspectFill" lazy-load />
+            <text wx:else>🥈</text>
+          </view>
+          <view class="podium-name">{{rankList[1].nickNo}}</view>
+          <view class="podium-count">{{rankList[1].totalCount}}题</view>
+          <view class="podium-like {{rankList[1].liked ? 'liked' : ''}}" catchtap="onLike" data-user-id="{{rankList[1].userId}}" data-index="1">
+            <text class="podium-like-icon">{{rankList[1].liked ? '❤️' : '🤍'}}</text>
+            <text class="podium-like-num" wx:if="{{rankList[1].likeCount > 0}}">{{rankList[1].likeCount}}</text>
+          </view>
+          <view class="podium-bar bar-2">
+            <view class="podium-bar-top"></view>
+            <text class="podium-bar-num">2</text>
+            <view class="podium-bar-shine"></view>
+          </view>
+        </view>
+        <view wx:if="{{rankList.length >= 1}}" class="podium-item rank-1">
+          <view class="podium-avatar">
+            <image wx:if="{{rankList[0].avatar}}" class="podium-avatar-img" src="{{rankList[0].avatar}}" mode="aspectFill" lazy-load />
+            <text wx:else>🥇</text>
+          </view>
+          <view class="podium-name">{{rankList[0].nickNo}}</view>
+          <view class="podium-count">{{rankList[0].totalCount}}题</view>
+          <view class="podium-like {{rankList[0].liked ? 'liked' : ''}}" catchtap="onLike" data-user-id="{{rankList[0].userId}}" data-index="0">
+            <text class="podium-like-icon">{{rankList[0].liked ? '❤️' : '🤍'}}</text>
+            <text class="podium-like-num" wx:if="{{rankList[0].likeCount > 0}}">{{rankList[0].likeCount}}</text>
+          </view>
+          <view class="podium-bar bar-1">
+            <view class="podium-bar-top"></view>
+            <text class="podium-bar-num">1</text>
+            <view class="podium-bar-shine"></view>
+          </view>
+        </view>
+        <view wx:if="{{rankList.length >= 3}}" class="podium-item rank-3">
+          <view class="podium-avatar">
+            <image wx:if="{{rankList[2].avatar}}" class="podium-avatar-img" src="{{rankList[2].avatar}}" mode="aspectFill" lazy-load />
+            <text wx:else>🥉</text>
+          </view>
+          <view class="podium-name">{{rankList[2].nickNo}}</view>
+          <view class="podium-count">{{rankList[2].totalCount}}题</view>
+          <view class="podium-like {{rankList[2].liked ? 'liked' : ''}}" catchtap="onLike" data-user-id="{{rankList[2].userId}}" data-index="2">
+            <text class="podium-like-icon">{{rankList[2].liked ? '❤️' : '🤍'}}</text>
+            <text class="podium-like-num" wx:if="{{rankList[2].likeCount > 0}}">{{rankList[2].likeCount}}</text>
+          </view>
+          <view class="podium-bar bar-3">
+            <view class="podium-bar-top"></view>
+            <text class="podium-bar-num">3</text>
+            <view class="podium-bar-shine"></view>
+          </view>
+        </view>
+      </view>
+
+      <view class="rank-list" style="{{rankList.length < 3 ? 'margin-top: 24rpx;' : ''}}">
+        <view wx:for="{{rankList}}" wx:key="rank" wx:if="{{rankList.length < 3 || index >= 3}}" class="rank-row">
+          <view class="rank-num">{{item.rank}}</view>
+          <image wx:if="{{item.avatar}}" class="rank-avatar" src="{{item.avatar}}" mode="aspectFill" lazy-load />
+          <view class="rank-name">{{item.nickNo}}</view>
+          <view class="rank-total">{{item.totalCount}}题</view>
+          <view class="rank-like-btn {{item.liked ? 'liked' : ''}}" catchtap="onLike" data-user-id="{{item.userId}}" data-index="{{index}}">
+            <text class="like-icon">{{item.liked ? '❤️' : '🤍'}}</text>
+            <text class="like-count" wx:if="{{item.likeCount > 0}}">{{item.likeCount}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{rankList.length === 0}}" class="empty-tip"><text>暂无排行数据</text></view>
+    </block>
+
+    <!-- 底部栏：我的排名 + 类型切换
+         性能优化：底栏是 position:fixed，跳出 dark-layer 的 clip-path 裁剪范围。
+         若按原设计由 dark-layer 内嵌一份 fixed 副本，深→浅切换时该副本
+         直到 dark-layer 卸载（580ms 后）才消失，造成"慢半拍"。
+         修复：仅保留 light-layer 这一份 fixed 底栏，元素自身挂 .dark class（由 darkMode 立即驱动），
+         用 .rank-bottom-bar.dark 选择器独立切换深色样式，与 dark-layer 动画同步。 -->
+    <view class="rank-bottom-bar {{darkMode ? 'dark' : ''}}">
+      <view wx:if="{{isLogin && myRank}}" class="my-rank-info-row">
+        <view class="my-rank-num">第{{myRank}}名</view>
+        <view class="my-rank-info">
+          <text>我</text>
+          <text class="my-rank-count">{{myTotalCount}}题</text>
+        </view>
+      </view>
+      <view wx:if="{{!isLogin && !loading}}" class="guest-tip-inline">
+        <text>登录后可查看你的排名</text>
+      </view>
+      <view class="rank-tab-switch">
+        <view class="rank-tab {{rankType === 'total' ? 'active' : ''}}" catchtap="switchRank" data-type="total">总榜</view>
+        <view class="rank-tab {{rankType === 'today' ? 'active' : ''}}" catchtap="switchRank" data-type="today">今日榜</view>
+      </view>
+    </view>
+
+    <!-- ========== 深色层（覆盖在浅色层之上，纯视觉层，不绑定任何事件） ========== -->
+    <view class="rank-page dark theme-layer dark-layer {{clipNoTransition ? 'no-transition' : ''}}"
+          wx:if="{{darkLayerVisible}}"
+          style="clip-path: {{darkClipPath}}; -webkit-clip-path: {{darkClipPath}}; transition-duration: {{themeDur}}s; -webkit-transition-duration: {{themeDur}}s;">
+
+      <view wx:if="{{loading}}" class="loading-tip"><text>加载中...</text></view>
+
+      <block wx:if="{{!loading}}">
+        <view wx:if="{{rankList.length >= 1}}" class="podium">
+          <!-- 舞台天光：日光/月光光束 + 白云（日间）/ 薄雾+星空（夜间） -->
+          <view class="podium-sky">
+            <view class="light-beam beam-1"></view>
+            <view class="light-beam beam-2"></view>
+            <view class="cloud cloud-1"></view>
+            <view class="cloud cloud-2"></view>
+            <view class="cloud cloud-3"></view>
+            <view class="cloud cloud-4"></view>
+            <view class="star s1"></view>
+            <view class="star s2"></view>
+            <view class="star s3"></view>
+            <view class="star s4"></view>
+            <view class="star s5"></view>
+            <view class="star s6"></view>
+            <view class="star s7"></view>
+            <view class="star s8"></view>
+            <view class="star s9"></view>
+            <view class="star s10"></view>
+            <view class="star s11"></view>
+            <view class="star s12"></view>
+            <text class="star-spark sp1">✦</text>
+            <text class="star-spark sp2">✦</text>
+            <text class="star-spark sp3">✦</text>
+            <text class="star-spark sp4">✦</text>
+          </view>
+          <view wx:if="{{rankList.length >= 2}}" class="podium-item rank-2">
+            <view class="podium-avatar">
+              <image wx:if="{{rankList[1].avatar}}" class="podium-avatar-img" src="{{rankList[1].avatar}}" mode="aspectFill" lazy-load />
+              <text wx:else>🥈</text>
+            </view>
+            <view class="podium-name">{{rankList[1].nickNo}}</view>
+            <view class="podium-count">{{rankList[1].totalCount}}题</view>
+            <view class="podium-like {{rankList[1].liked ? 'liked' : ''}}">
+              <text class="podium-like-icon">{{rankList[1].liked ? '❤️' : '🤍'}}</text>
+              <text class="podium-like-num" wx:if="{{rankList[1].likeCount > 0}}">{{rankList[1].likeCount}}</text>
+            </view>
+            <view class="podium-bar bar-2">
+            <view class="podium-bar-top"></view>
+            <text class="podium-bar-num">2</text>
+            <view class="podium-bar-shine"></view>
+          </view>
+          </view>
+          <view wx:if="{{rankList.length >= 1}}" class="podium-item rank-1">
+            <view class="podium-avatar">
+              <image wx:if="{{rankList[0].avatar}}" class="podium-avatar-img" src="{{rankList[0].avatar}}" mode="aspectFill" lazy-load />
+              <text wx:else>🥇</text>
+            </view>
+            <view class="podium-name">{{rankList[0].nickNo}}</view>
+            <view class="podium-count">{{rankList[0].totalCount}}题</view>
+            <view class="podium-like {{rankList[0].liked ? 'liked' : ''}}">
+              <text class="podium-like-icon">{{rankList[0].liked ? '❤️' : '🤍'}}</text>
+              <text class="podium-like-num" wx:if="{{rankList[0].likeCount > 0}}">{{rankList[0].likeCount}}</text>
+            </view>
+            <view class="podium-bar bar-1">
+            <view class="podium-bar-top"></view>
+            <text class="podium-bar-num">1</text>
+            <view class="podium-bar-shine"></view>
+          </view>
+          </view>
+          <view wx:if="{{rankList.length >= 3}}" class="podium-item rank-3">
+            <view class="podium-avatar">
+              <image wx:if="{{rankList[2].avatar}}" class="podium-avatar-img" src="{{rankList[2].avatar}}" mode="aspectFill" lazy-load />
+              <text wx:else>🥉</text>
+            </view>
+            <view class="podium-name">{{rankList[2].nickNo}}</view>
+            <view class="podium-count">{{rankList[2].totalCount}}题</view>
+            <view class="podium-like {{rankList[2].liked ? 'liked' : ''}}">
+              <text class="podium-like-icon">{{rankList[2].liked ? '❤️' : '🤍'}}</text>
+              <text class="podium-like-num" wx:if="{{rankList[2].likeCount > 0}}">{{rankList[2].likeCount}}</text>
+            </view>
+            <view class="podium-bar bar-3">
+            <view class="podium-bar-top"></view>
+            <text class="podium-bar-num">3</text>
+            <view class="podium-bar-shine"></view>
+          </view>
+          </view>
+        </view>
+
+        <view class="rank-list" style="{{rankList.length < 3 ? 'margin-top: 24rpx;' : ''}}">
+          <view wx:for="{{rankList}}" wx:key="rank" wx:if="{{rankList.length < 3 || index >= 3}}" class="rank-row">
+            <view class="rank-num">{{item.rank}}</view>
+            <image wx:if="{{item.avatar}}" class="rank-avatar" src="{{item.avatar}}" mode="aspectFill" lazy-load />
+            <view class="rank-name">{{item.nickNo}}</view>
+            <view class="rank-total">{{item.totalCount}}题</view>
+            <view class="rank-like-btn {{item.liked ? 'liked' : ''}}">
+              <text class="like-icon">{{item.liked ? '❤️' : '🤍'}}</text>
+              <text class="like-count" wx:if="{{item.likeCount > 0}}">{{item.likeCount}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{rankList.length === 0}}" class="empty-tip"><text>暂无排行数据</text></view>
+      </block>
+
+      <!-- 底部栏副本已移除：
+           原 dark-layer 内嵌一份 .rank-bottom-bar（fixed 定位），
+           但 fixed 元素跳出 dark-layer 的 clip-path 裁剪范围，
+           导致深→浅切换时它直到 dark-layer 卸载才消失（慢半拍），
+           浅→深切换时它又先于扩散动画出现（提前变深）。
+           现底栏仅由 light-layer 那份渲染，用 darkMode 立即驱动深色样式。 -->
+    </view>
+
+  </view>
+
+</view>

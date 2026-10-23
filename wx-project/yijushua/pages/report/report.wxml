@@ -1,0 +1,369 @@
+<!--
+  学习报告页
+  --------------------------------------------------
+  设计：涧石蓝主色 + 月白渐变；数据卡片层叠；GitHub 风格热力图
+  结构：Hero 头部 → 时间切换 → 热力图 → 打卡成就 → 科目正确率 → 时段分布
+-->
+
+<view class="report-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ========== Hero 头部 ========== -->
+  <view class="hero">
+    <!-- 装饰光斑 -->
+    <view class="hero-orb hero-orb-a"></view>
+    <view class="hero-orb hero-orb-b"></view>
+    <view class="hero-grid-bg"></view>
+
+    <view class="hero-content">
+      <view class="hero-eyebrow">
+        <text class="hero-eyebrow-dot"></text>
+        <text>STUDY REPORT</text>
+      </view>
+      <view class="hero-title">学习报告</view>
+      <view class="hero-sub">坚持的力量，看得见的进步</view>
+
+      <!-- 关键指标三栏 -->
+      <view class="hero-kpis">
+        <view class="hero-kpi">
+          <view class="hero-kpi-icon">🔥</view>
+          <view class="hero-kpi-num">{{streak}}</view>
+          <view class="hero-kpi-label">连续打卡</view>
+        </view>
+        <view class="hero-kpi-divider"></view>
+        <view class="hero-kpi">
+          <view class="hero-kpi-icon">🏆</view>
+          <view class="hero-kpi-num">{{longestStreak}}</view>
+          <view class="hero-kpi-label">最长连续</view>
+        </view>
+        <view class="hero-kpi-divider"></view>
+        <view class="hero-kpi">
+          <view class="hero-kpi-icon">📚</view>
+          <view class="hero-kpi-num">{{grandTotal}}</view>
+          <view class="hero-kpi-label">累计题数</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 时间范围切换 ========== -->
+  <view class="range-bar">
+    <view class="range-track">
+      <view wx:for="{{ranges}}" wx:key="value"
+            class="range-pill {{range === item.value ? 'range-pill-active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onRangeTap"
+            hover-class="hover-pill"
+            hover-stay-time="100">
+        {{item.label}}
+      </view>
+    </view>
+    <view class="range-meta">日均 {{avgPerDay}} 题 · 共答 {{totalAnswers}} 题</view>
+  </view>
+
+  <!-- ========== 答题热力图（仿 GitHub 贡献图） ========== -->
+  <view class="card heatmap-card">
+    <view class="card-header">
+      <view class="card-title">
+        <text class="card-icon">📅</text>
+        <text>答题热力图</text>
+      </view>
+      <view class="card-sub">{{range === 7 ? '近 7 天' : '近 30 天'}}</view>
+    </view>
+
+    <block wx:if="{{hasHeatmap}}">
+      <!-- 7 日视图：横向单行 -->
+      <view wx:if="{{heatmap.layout === 'row'}}" class="heatmap-7day">
+        <view wx:for="{{heatmap.grid[0]}}" wx:key="key"
+              class="day7-cell {{item.isToday ? 'is-today' : ''}}">
+          <view class="day7-square level-{{item.level}}">
+            <text wx:if="{{item.count > 0}}" class="day7-count">{{item.count}}</text>
+          </view>
+          <view class="day7-label {{item.isToday ? 'day7-label-today' : ''}}">
+            {{item.day === 0 ? '日' : item.day === 1 ? '一' : item.day === 2 ? '二' : item.day === 3 ? '三' : item.day === 4 ? '四' : item.day === 5 ? '五' : '六'}}
+          </view>
+          <view class="day7-date {{item.isToday ? 'day7-date-today' : ''}}">{{item.date}}</view>
+        </view>
+      </view>
+
+      <!-- 30 日视图：周行日历式（与 7 日视图同款大格子） -->
+      <view wx:else class="heatmap-30">
+        <!-- 星期表头 -->
+        <view class="week-head">
+          <text class="week-head-cell">日</text>
+          <text class="week-head-cell">一</text>
+          <text class="week-head-cell">二</text>
+          <text class="week-head-cell">三</text>
+          <text class="week-head-cell">四</text>
+          <text class="week-head-cell">五</text>
+          <text class="week-head-cell">六</text>
+        </view>
+
+        <!-- 按周渲染（5 行 × 7 列） -->
+        <view wx:for="{{heatmap.weeks}}" wx:for-item="week" wx:key="index" class="week-row">
+          <view wx:for="{{week}}" wx:for-item="cell" wx:key="key"
+                class="day30-cell {{cell.isToday ? 'is-today' : ''}} {{cell.inRange ? 'in-range' : 'out-range'}}">
+            <view class="day30-square level-{{cell.level}}">
+              <text wx:if="{{cell.count > 0 && cell.inRange}}" class="day30-count">{{cell.count}}</text>
+            </view>
+            <view class="day30-date {{cell.isToday ? 'day30-date-today' : ''}}">
+              <text wx:if="{{cell.inRange}}">{{cell.date}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 图例 -->
+      <view class="heatmap-legend">
+        <text class="legend-text">少</text>
+        <view class="heatmap-cell level-0 legend-sample"></view>
+        <view class="heatmap-cell level-1 legend-sample"></view>
+        <view class="heatmap-cell level-2 legend-sample"></view>
+        <view class="heatmap-cell level-3 legend-sample"></view>
+        <view class="heatmap-cell level-4 legend-sample"></view>
+        <text class="legend-text">多</text>
+      </view>
+    </block>
+
+    <!-- 空状态 -->
+    <view wx:else class="empty-state">
+      <view class="empty-icon">🌱</view>
+      <view class="empty-text">还没有答题记录</view>
+      <view class="empty-hint">开始刷题，让你的热力图亮起来</view>
+    </view>
+  </view>
+
+  <!-- ========== 打卡成就卡片 ========== -->
+  <view class="card streak-card">
+    <view class="card-header">
+      <view class="card-title">
+        <text class="card-icon">⚡</text>
+        <text>打卡成就</text>
+      </view>
+    </view>
+
+    <view class="streak-grid">
+      <view class="streak-cell streak-current">
+        <view class="streak-flame {{streak > 0 ? 'flame-on' : ''}}">
+          <text class="streak-flame-icon">🔥</text>
+          <view wx:if="{{streak > 0}}" class="flame-pulse"></view>
+        </view>
+        <view class="streak-name">当前连续</view>
+        <view class="streak-value">
+          <text class="streak-num">{{streak}}</text>
+          <text class="streak-unit">天</text>
+        </view>
+        <view wx:if="{{streak === 0}}" class="streak-tip">今日尚未做题</view>
+        <view wx:elif="{{streak < 7}}" class="streak-bar-wrap">
+          <view class="streak-bar" style="width: {{streak * 14}}%;"></view>
+        </view>
+        <view wx:else class="streak-badge">已破 7 日</view>
+      </view>
+
+      <view class="streak-cell streak-longest">
+        <view class="streak-flame crown">
+          <text class="streak-flame-icon">👑</text>
+        </view>
+        <view class="streak-name">最长连续</view>
+        <view class="streak-value">
+          <text class="streak-num">{{longestStreak}}</text>
+          <text class="streak-unit">天</text>
+        </view>
+        <view class="streak-meta">
+          <text wx:if="{{longestStreak >= 30}}" class="streak-medal">🥇 月度大师</text>
+          <text wx:elif="{{longestStreak >= 14}}" class="streak-medal">🥈 持之以恒</text>
+          <text wx:elif="{{longestStreak >= 7}}" class="streak-medal">🥉 一周达成</text>
+          <text wx:else class="streak-medal streak-medal-mute">向前 7 天冲刺</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 每日刷题提醒（订阅消息授权） ========== -->
+  <view class="card remind-card">
+    <view class="card-header">
+      <view class="card-title">
+        <text class="card-icon">🔔</text>
+        <text>每日刷题提醒</text>
+      </view>
+      <view class="remind-status {{remindEnabled ? 'is-on' : ''}}">{{remindEnabled ? '已开启' : '未开启'}}</view>
+    </view>
+
+    <view class="remind-body">
+      <view class="remind-copy">
+        <view class="remind-main">{{remindEnabled ? '每天提醒你刷题打卡' : '开启后每天提醒你刷题打卡'}}</view>
+        <view class="remind-sub {{todayDone ? 'is-done' : ''}}">
+          {{todayDone ? '今日已打卡，明天继续保持' : '今日还未打卡，别断了连续记录'}}
+        </view>
+      </view>
+      <switch class="remind-switch" checked="{{remindEnabled}}" color="#3D6B7E" bindchange="onRemindSwitch" />
+    </view>
+
+    <!-- 提醒时间：默认 20:00，用户可自行修改 -->
+    <view class="remind-time-row">
+      <text class="remind-time-label">提醒时间</text>
+      <picker mode="time" value="{{remindTimeValue}}" bindchange="onRemindTimeChange">
+        <view class="remind-time-pill" hover-class="remind-time-pill-hover" hover-stay-time="100">
+          <text class="remind-time-value">{{remindTimeValue}}</text>
+          <text class="remind-time-edit">修改</text>
+        </view>
+      </picker>
+    </view>
+
+    <view wx:if="{{remindEnabled}}" class="remind-foot">
+      <text class="remind-foot-text">微信订阅消息为单次授权，可补充授权累积提醒次数</text>
+      <view class="remind-again" bindtap="onRemindAuthAgain" hover-class="remind-again-hover" hover-stay-time="100">
+        补充授权
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 各科目正确率 ========== -->
+  <view class="card subject-card">
+    <view class="card-header">
+      <view class="card-title">
+        <text class="card-icon">📊</text>
+        <text>各科目正确率</text>
+      </view>
+      <view wx:if="{{hasSubjectData}}" class="card-sub">已掌握程度</view>
+    </view>
+
+    <block wx:if="{{hasSubjectData}}">
+      <view class="subject-list">
+        <view wx:for="{{subjects.list}}" wx:key="name" class="subject-row">
+          <view class="subject-name-row">
+            <text class="subject-name">{{item.name}}</text>
+            <text class="subject-meta">{{item.correct}}/{{item.total}}</text>
+          </view>
+          <view class="subject-bar-wrap">
+            <view class="subject-bar"
+                  style="width: {{item.accuracy}}%; background: linear-gradient(90deg, {{item.color}}, {{item.color}}cc);">
+            </view>
+          </view>
+          <view class="subject-pct">
+            <text class="subject-pct-num" style="color: {{item.color}};">{{item.accuracy}}</text>
+            <text class="subject-pct-sym">%</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <view class="empty-icon">📈</view>
+      <view class="empty-text">暂无科目数据</view>
+      <view class="empty-hint">多做几道题，正确率会在这里展示</view>
+    </view>
+  </view>
+
+  <!-- ========== 最佳时段分布 ========== -->
+  <view class="card hour-card">
+    <view class="card-header">
+      <view class="card-title">
+        <text class="card-icon">⏰</text>
+        <text>答题时段分布</text>
+      </view>
+      <view wx:if="{{hasHourData}}" class="card-sub peak-tag">🏆 {{peakRange}}</view>
+    </view>
+
+    <block wx:if="{{hasHourData}}">
+      <!-- 24h 柱状图 -->
+      <view class="hour-hist">
+        <view wx:for="{{hours.buckets}}" wx:key="hour"
+              class="hour-col {{item.isPeak ? 'is-peak' : ''}}">
+          <view class="hour-bar-wrap">
+            <view class="hour-bar {{item.count === 0 ? 'zero' : ''}} {{item.isPeak ? 'peak' : ''}}"
+                  style="height: {{item.height}}%;"></view>
+          </view>
+        </view>
+      </view>
+      <!-- 时间轴：刻度统一放在图表下方，不占用柱图高度 -->
+      <view class="hour-axis">
+        <view wx:for="{{hours.buckets}}" wx:key="hour" class="hour-axis-col">
+          <view wx:if="{{item.hour % 6 === 0}}" class="hour-label">{{item.hour}}h</view>
+          <view wx:elif="{{item.hour % 3 === 0}}" class="hour-label hour-label-minor">·</view>
+        </view>
+      </view>
+
+      <!-- 时段段统计 -->
+      <view class="period-grid">
+        <view wx:for="{{periods}}" wx:key="name" class="period-cell">
+          <view class="period-head">
+            <text class="period-icon">{{item.icon}}</text>
+            <text class="period-name">{{item.name}}</text>
+          </view>
+          <view class="period-pct">{{item.pct}}%</view>
+          <view class="period-bar-wrap">
+            <view class="period-bar" style="width: {{item.pct}}%;"></view>
+          </view>
+          <view class="period-count">{{item.count}} 题</view>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <view class="empty-icon">🌙</view>
+      <view class="empty-text">时段分布待解锁</view>
+      <view class="empty-hint">继续答题，发现你的高效时段</view>
+    </view>
+  </view>
+
+  <!-- ========== 底部签名 ========== -->
+  <view class="footer-sig">
+    <text>—— 坚持每一天，成长看得见 ——</text>
+  </view>
+
+  <!-- ========== 浮动按钮：生成海报 ========== -->
+  <view class="poster-fab" bindtap="onPosterTap" hover-class="poster-fab-hover" hover-stay-time="120">
+    <text class="poster-fab-icon">🎁</text>
+    <text class="poster-fab-label">生成海报</text>
+  </view>
+
+  <!-- ========== 海报预览 Modal ========== -->
+  <view wx:if="{{showPoster}}" class="poster-mask is-visible" catchtap="closePoster" catchtouchmove="noop">
+    <view class="poster-modal" catchtap="noop" catchtouchmove="noop">
+      <view class="poster-modal-header">
+        <view class="poster-modal-title">
+          <text class="poster-modal-title-icon">🏆</text>
+          <text>我的学习报告</text>
+        </view>
+        <view class="poster-close-btn" bindtap="closePoster" hover-class="poster-close-hover" hover-stay-time="100">
+          <text>✕</text>
+        </view>
+      </view>
+
+      <view class="poster-canvas-wrap">
+        <canvas type="2d" id="poster-canvas" class="poster-canvas"></canvas>
+        <!-- 导出成功后用位图覆盖 canvas：规避个别机型 canvas 图层错位的渲染 bug -->
+        <image wx:if="{{posterImagePath}}" src="{{posterImagePath}}" class="poster-image" mode="scaleToFill"></image>
+        <view wx:if="{{posterLoading || (posterReady && !posterImagePath && !posterExportFailed)}}" class="poster-loading">
+          <view class="poster-dots">
+            <view class="poster-dot"></view>
+            <view class="poster-dot"></view>
+            <view class="poster-dot"></view>
+          </view>
+          <text class="poster-loading-text">海报生成中...</text>
+        </view>
+      </view>
+
+      <view class="poster-actions">
+        <button class="poster-action-btn poster-action-primary" open-type="share"
+                disabled="{{posterLoading}}" hover-class="btn-hover" hover-stay-time="100">
+          <text class="poster-action-icon">📤</text>
+          <text>分享给好友</text>
+        </button>
+        <view class="poster-action-btn poster-action-secondary" bindtap="savePoster"
+              hover-class="btn-hover" hover-stay-time="100">
+          <text class="poster-action-icon">⬇</text>
+          <text>保存到相册</text>
+        </view>
+      </view>
+      <view class="poster-close-text" bindtap="closePoster" hover-class="poster-close-text-hover" hover-stay-time="100">
+        <text>关闭</text>
+      </view>
+      <view class="poster-hint">
+        <text class="poster-hint-icon">💡</text>
+        <text>分享给好友可直接发海报 · 朋友圈请点右上角 ···</text>
+      </view>
+    </view>
+  </view>
+
+</view>

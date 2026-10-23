@@ -1,0 +1,849 @@
+/**
+ * 排行榜页面样式
+ * --------------------------------------------------
+ * 优化：领奖台渐变柔和化、卡片边框统一、间距呼吸感增强
+ */
+
+/* ========== 整页容器 ========== */
+.rank-container {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  will-change: transform;
+  z-index: 1;
+}
+
+/* 滑动转场收尾动画 */
+.rank-container.swipe-animating {
+  transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 滑动预览层 */
+.swipe-peek {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 0;
+  will-change: transform;
+}
+
+.swipe-peek.swipe-peek-anim {
+  transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ========== 排行榜页面 ========== */
+.rank-page {
+  /* 普鲁士蓝主色调（柔化） */
+  --color-primary: #003D66;
+  --color-primary-light: #1A5A8A;
+  --color-text: #001F3D;
+  --color-text-secondary: #3A5A75;
+  --color-text-hint: #6B8AA3;
+  /* 浮光辅色调 */
+  --color-bg: #E3EDF5;
+  --color-card: #F8FBFD;
+  --color-border: #C4D6E4;
+
+  background: var(--color-bg);
+  padding-bottom: calc(280rpx + env(safe-area-inset-bottom));
+}
+
+/* ========== 双层布局 ==========
+   说明：浅色层承担滚动（overflow-y: auto），深色层作为浅色层的
+   绝对定位子元素覆盖在上面（pointer-events: none，纯视觉），
+   这样滚动时两层天然同步，避免深色模式下"画面不动"与点击错位。
+*/
+.rank-page.light-layer {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  z-index: 1;
+}
+
+.rank-page.dark-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* 关键：保证深色层至少铺满视口高度。
+     今日榜数据较少时，深色层内容高度可能小于视口高度，
+     若不设下限，深色层只覆盖到内容末尾，下方矩形区域不在深色层内，
+     clip-path 扩散动画无法作用于该区域，会出现"矩形没跟随动画、
+     过一会才变深"的现象（580ms 后浅色层挂 .dark 才补上）。
+     min-height: 100% 让短内容时铺满视口，长内容时仍可随内容增长。 */
+  min-height: 100%;
+  box-sizing: border-box;
+  z-index: 2;
+  /* transition 用 longhand 拆开写，duration 不在这里指定：
+     duration 由内联 style 的 transition-duration 提供（按 maxRadius 等比例换算），
+     以保证长榜单扩散速度与首页一致。一旦这里写 transition 简写
+     (含 duration)，它会 reset 整个 transition 并覆盖内联 longhand，
+     导致浅→深时新建的 dark-layer 首帧仍按这里的固定 duration 快速扩散。 */
+  transition-property: clip-path, -webkit-clip-path;
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  pointer-events: none;
+}
+.rank-page.dark-layer.no-transition {
+  transition: none !important;
+}
+
+/* ========== BGM 开关按钮（音符） ========== */
+.bgm-toggle-btn {
+  position: fixed;
+  top: 24rpx;
+  right: 116rpx;
+  z-index: 100;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+/* 深色模式：浅色半透明圆底 + 亮描边（与右侧主题按钮的夜间观感一致），
+   避免深色页面上按钮糊成一片 */
+.bgm-toggle-btn.night {
+  background: rgba(232, 232, 240, 0.16);
+  border: 2rpx solid rgba(232, 232, 240, 0.4);
+}
+
+/* 开启时变为深色，代表正在播放 BGM */
+.bgm-toggle-btn.on {
+  background: rgba(26, 26, 46, 0.85);
+  box-shadow: 0 4rpx 16rpx rgba(26, 26, 46, 0.3);
+}
+
+/* 深色模式开启态：琥珀色描边 + 光晕，明确"正在播放" */
+.bgm-toggle-btn.night.on {
+  border-color: rgba(255, 209, 102, 0.6);
+  box-shadow: 0 0 20rpx rgba(255, 183, 77, 0.35), 0 4rpx 16rpx rgba(26, 26, 46, 0.4);
+}
+
+/* 音符图标：日间深琥珀 / 深色模式亮琥珀，两种模式下都清晰可见
+   （原 🎵 emoji 未设显式颜色，部分设备渲染为深色字形，深色模式下看不清） */
+.bgm-toggle-icon {
+  font-size: 40rpx;
+  font-weight: 600;
+  line-height: 1;
+  color: #C77800;
+}
+
+.bgm-toggle-btn.night .bgm-toggle-icon {
+  color: #FFB74D;
+}
+
+.bgm-toggle-btn.on .bgm-toggle-icon {
+  color: #FFD166;
+  animation: bgmSpin 3s linear infinite;
+}
+
+@keyframes bgmSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ========== 唱片杆（唱臂）==========
+   与首页 home.wxss 完全一致：
+   唱片圆心 = 距右 152rpx / 距顶 60rpx（按钮 right:116 + 半径36、top:24 + 半径36）
+   支点圆心 = 唱片正上方「距右 152rpx / 距顶 10rpx」，杆长 50rpx
+   —— 停止态 rotate(62deg)：整根杆离唱片边缘最近 44.1rpx > 半径 36(+2rpx 描边)，明显抬离唱片；
+      抬向左侧（页面内侧），避开右侧的主题切换按钮（本页 right:32，占 32~104rpx）
+   —— 播放态 rotate(-34deg)：唱头落在距圆心 29rpx 处（约 0.8R，唱片的纹路上），最右侧约 118rpx
+   定位方式跟随本页 BGM 按钮（按钮是 absolute，唱臂也用 absolute，避免滚动时两层脱开） */
+.bgm-arm {
+  position: fixed;
+  top: 0rpx;                /* 支点圆心 = 此处 + 10rpx，与按钮 top:24 配套（圆心 60 - 杆长 50） */
+  right: 142rpx;            /* 142 + 10(支点半径) = 152，与唱片圆心同一条竖线 */
+  z-index: 101;             /* 高于唱片按钮(100)，唱臂压在唱片之上 */
+  width: 20rpx;
+  height: 60rpx;
+  transform-origin: 10rpx 10rpx;   /* 支点圆心 */
+  transform: rotate(62deg);        /* 默认：抬起 */
+  transition: transform 0.55s cubic-bezier(0.32, 1.24, 0.58, 1);
+}
+
+/* 播放：唱臂落下 */
+.bgm-arm.on {
+  transform: rotate(-34deg);
+}
+
+/* 配重（支点后端的配重块，随杆一起转） */
+.bgm-arm-weight {
+  position: absolute;
+  left: 6rpx;
+  top: 1rpx;
+  width: 8rpx;
+  height: 10rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(90deg, #B9BFCE 0%, #F2F4F8 45%, #8F95A8 100%);
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.25);
+}
+
+/* 杆身：金属渐变，浅色/深色背景下都能看清 */
+.bgm-arm-rod {
+  position: absolute;
+  left: 7rpx;
+  top: 10rpx;
+  width: 6rpx;
+  height: 44rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(90deg, #C9CEDB 0%, #F5F7FA 40%, #A6ACBD 100%);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.28);
+}
+
+/* 唱头（搭在唱片上的那一头） */
+.bgm-arm-head {
+  position: absolute;
+  left: 4rpx;
+  top: 46rpx;
+  width: 12rpx;
+  height: 14rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(180deg, #E9ECF4 0%, #8E94A8 100%);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.32);
+}
+
+/* 支点转轴 */
+.bgm-arm-pivot {
+  position: absolute;
+  left: 3rpx;
+  top: 3rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #D7DBE6 45%, #8F95A8 100%);
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 播放态：唱头带一点琥珀色光晕，和唱片的琥珀描边呼应 */
+.bgm-arm.on .bgm-arm-head {
+  background: linear-gradient(180deg, #FFE1A6 0%, #E0A63C 100%);
+  box-shadow: 0 0 8rpx rgba(255, 183, 77, 0.55), 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 深色模式：唱臂整体调暗一档并保留金属高光，避免杆子在深底上过于刺眼 */
+.bgm-arm.night .bgm-arm-weight {
+  background: linear-gradient(90deg, #5F657A 0%, #BFC4D2 45%, #4E5468 100%);
+}
+.bgm-arm.night .bgm-arm-rod {
+  background: linear-gradient(90deg, #6E7488 0%, #C7CCDA 40%, #565C70 100%);
+}
+.bgm-arm.night .bgm-arm-head {
+  background: linear-gradient(180deg, #C3C8D6 0%, #6C7286 100%);
+}
+.bgm-arm.night .bgm-arm-pivot {
+  background: radial-gradient(circle at 35% 30%, #E8EAF2 0%, #A9AFC0 45%, #5C6276 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ========== 深色模式切换按钮（日间=太阳光晕 / 夜间=月光晕） ========== */
+.theme-toggle-btn {
+  position: fixed;
+  top: 24rpx;
+  right: 32rpx;
+  z-index: 100;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+  box-shadow: 0 0 28rpx rgba(255, 196, 64, 0.55), 0 4rpx 16rpx rgba(255, 170, 40, 0.35);
+  transition: box-shadow 0.4s ease;
+}
+
+.theme-toggle-btn.is-night {
+  box-shadow: 0 0 28rpx rgba(170, 200, 255, 0.5), 0 4rpx 16rpx rgba(120, 160, 255, 0.3);
+}
+
+.theme-icon {
+  font-size: 36rpx;
+}
+.loading-tip,
+.empty-tip {
+  text-align: center;
+  padding: 200rpx 0;
+  color: var(--color-text-hint);
+  font-size: calc(28rpx * var(--font-scale, 1));
+}
+
+/* ========== 领奖台区 ==========
+   日间：天蓝色天空渐变（上深下浅如真实天穹）+ 右上角太阳高光 + 白云
+   夜间：月光代替日光，星空在舞台天幕上显现 */
+.podium {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background:
+    radial-gradient(115% 85% at 88% -12%, rgba(255, 240, 190, 0.55) 0%, rgba(255, 220, 140, 0.18) 42%, transparent 64%),
+    linear-gradient(180deg, #3A9BDF 0%, #57ABE4 25%, #79BDEB 50%, #9CCFEF 72%, #BFE0F5 88%, #E3EDF5 100%);
+  padding: 56rpx 32rpx 0;
+  gap: 28rpx;
+  border-radius: 0 0 40rpx 40rpx;
+}
+
+.podium-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.podium-avatar {
+  font-size: 72rpx;
+  margin-bottom: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.podium-avatar-img {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.4);
+}
+
+/* 前三名头像环：金 / 银 / 铜，冠军带光晕 */
+.rank-1 .podium-avatar-img {
+  border-color: #FFD54F;
+  box-shadow: 0 0 24rpx rgba(255, 213, 79, 0.65), 0 4rpx 12rpx rgba(0, 30, 60, 0.25);
+}
+.rank-2 .podium-avatar-img {
+  border-color: #DCE6F0;
+  box-shadow: 0 0 16rpx rgba(220, 230, 240, 0.5), 0 4rpx 12rpx rgba(0, 30, 60, 0.2);
+}
+.rank-3 .podium-avatar-img {
+  border-color: #E8B07E;
+  box-shadow: 0 0 16rpx rgba(232, 176, 126, 0.5), 0 4rpx 12rpx rgba(0, 30, 60, 0.2);
+}
+
+.podium-name {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: #ffffff;
+  max-width: 160rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: 1rpx;
+  text-shadow: 0 1rpx 6rpx rgba(10, 60, 100, 0.45);
+}
+
+.podium-count {
+  font-size: calc(22rpx * var(--font-scale, 1));
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 6rpx;
+  margin-bottom: 20rpx;
+  text-shadow: 0 1rpx 4rpx rgba(10, 60, 100, 0.4);
+}
+
+/* ========== 舞台天幕（光束 + 星空） ========== */
+.podium-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  border-radius: 0 0 40rpx 40rpx;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 日光/月光光束：自右上光源斜向洒落 */
+.light-beam {
+  position: absolute;
+  top: -80rpx;
+  width: 200rpx;
+  height: 900rpx;
+  background: linear-gradient(180deg, rgba(255, 238, 195, 0.28) 0%, rgba(255, 238, 195, 0.08) 45%, transparent 85%);
+  transform: rotate(16deg);
+  transform-origin: top center;
+}
+
+.beam-1 { right: 30rpx; }
+.beam-2 { right: 210rpx; width: 300rpx; opacity: 0.55; }
+
+/* 白云：日间显现（主体圆角条 + 两团云朵），缓慢漂移 */
+.cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 200rpx;
+  filter: blur(2px);
+  animation: cloudDrift 26s ease-in-out infinite;
+  z-index: 2; /* 云/雾在星空之上（雾在近处，星在远处），见下方 .star 的 z-index:1 */
+}
+
+/* 左团 */
+.cloud::before {
+  content: '';
+  position: absolute;
+  top: -55%;
+  left: 16%;
+  width: 55%;
+  height: 160%;
+  border-radius: 50%;
+  background: inherit;
+}
+
+/* 右团 */
+.cloud::after {
+  content: '';
+  position: absolute;
+  top: -38%;
+  right: 14%;
+  width: 42%;
+  height: 122%;
+  border-radius: 50%;
+  background: inherit;
+}
+
+.cloud-1 { top: 16rpx;  left: 36rpx;   width: 190rpx; height: 46rpx; opacity: 0.95; }
+.cloud-2 { top: 66rpx;  right: 22rpx;  width: 230rpx; height: 56rpx; opacity: 0.85; animation-duration: 32s; animation-delay: -8s; }
+.cloud-3 { top: 128rpx; left: 252rpx;  width: 130rpx; height: 34rpx; opacity: 0.5;  animation-duration: 22s; animation-delay: -14s; }
+.cloud-4 { top: 236rpx; right: 252rpx; width: 150rpx; height: 40rpx; opacity: 0.45; animation-duration: 29s; animation-delay: -4s; }
+
+/* 夜间：白云变薄雾（冷蓝白 + 加大模糊 + 大幅降透明度）。
+   层级（近景在上）：云/雾 z-index:2 → 星空 z-index:1，星星透过薄雾若隐若现。 */
+.rank-page.dark .cloud {
+  background: rgba(184, 212, 246, 0.45);
+  filter: blur(5px);
+}
+/* 逐朵单独调透明度，保留原有的疏密层次（日间 0.95/0.85/0.5/0.45 → 夜间整体压到 ~1/2） */
+.rank-page.dark .cloud-1 { opacity: 0.80; }
+.rank-page.dark .cloud-2 { opacity: 0.70; }
+.rank-page.dark .cloud-3 { opacity: 0.56; }
+.rank-page.dark .cloud-4 { opacity: 0.42; }
+
+@keyframes cloudDrift {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(26rpx); }
+}
+
+/* 星空：仅深色模式显现 */
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: #FFFFFF;
+  display: none;
+  z-index: 1; /* 星空在云/雾（z-index:2）之下，透过薄雾若隐若现 */
+  box-shadow: 0 0 10rpx rgba(255, 255, 255, 0.9);
+}
+
+.rank-page.dark .star { display: block; }
+
+.star.s1  { top: 30rpx;  left: 56rpx;   width: 12rpx; height: 12rpx; opacity: 0.9; }
+.star.s2  { top: 88rpx;  left: 150rpx;  width: 8rpx;  height: 8rpx;  opacity: 0.65; animation: twinkle 3.2s ease-in-out infinite; }
+.star.s3  { top: 48rpx;  left: 270rpx;  width: 10rpx; height: 10rpx; opacity: 0.8; }
+.star.s4  { top: 138rpx; left: 70rpx;   width: 8rpx;  height: 8rpx;  opacity: 0.6; animation: twinkle 2.6s ease-in-out 0.8s infinite; }
+.star.s5  { top: 200rpx; left: 210rpx;  width: 12rpx; height: 12rpx; opacity: 0.75; }
+.star.s6  { top: 58rpx;  right: 210rpx; width: 10rpx; height: 10rpx; opacity: 0.85; animation: twinkle 3.8s ease-in-out 0.4s infinite; }
+.star.s7  { top: 118rpx; right: 120rpx; width: 8rpx;  height: 8rpx;  opacity: 0.65; }
+.star.s8  { top: 178rpx; right: 240rpx; width: 12rpx; height: 12rpx; opacity: 0.8; animation: twinkle 2.9s ease-in-out 1.2s infinite; }
+.star.s9  { top: 250rpx; left: 330rpx;  width: 8rpx;  height: 8rpx;  opacity: 0.55; }
+.star.s10 { top: 100rpx; left: 424rpx;  width: 10rpx; height: 10rpx; opacity: 0.75; animation: twinkle 3.4s ease-in-out 1.6s infinite; }
+.star.s11 { top: 160rpx; right: 70rpx;  width: 8rpx;  height: 8rpx;  opacity: 0.65; animation: twinkle 2.4s ease-in-out 0.2s infinite; }
+.star.s12 { top: 268rpx; right: 320rpx; width: 10rpx; height: 10rpx; opacity: 0.6; }
+
+/* ✦ 大星：更醒目的四角星 */
+.star-spark {
+  position: absolute;
+  color: #FFFFFF;
+  line-height: 1;
+  display: none;
+  z-index: 1; /* 同 .star，位于云/雾之下 */
+  text-shadow: 0 0 14rpx rgba(255, 255, 255, 0.95);
+}
+
+.rank-page.dark .star-spark { display: block; }
+
+.star-spark.sp1 { top: 66rpx;  left: 104rpx;  font-size: 28rpx; opacity: 0.95; animation: sparkTwinkle 2.8s ease-in-out infinite; }
+.star-spark.sp2 { top: 146rpx; right: 168rpx; font-size: 32rpx; opacity: 0.9;  animation: sparkTwinkle 3.6s ease-in-out 0.7s infinite; }
+.star-spark.sp3 { top: 226rpx; left: 258rpx;  font-size: 24rpx; opacity: 0.85; animation: sparkTwinkle 3.1s ease-in-out 1.4s infinite; }
+.star-spark.sp4 { top: 34rpx;  right: 96rpx;  font-size: 22rpx; opacity: 0.8;  animation: sparkTwinkle 2.5s ease-in-out 0.3s infinite; }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%      { opacity: 0.95; transform: scale(1.15); }
+}
+
+@keyframes sparkTwinkle {
+  0%, 100% { opacity: 0.45; transform: scale(0.85) rotate(0deg); }
+  50%      { opacity: 1;    transform: scale(1.1) rotate(15deg); }
+}
+
+/* ========== 颁奖台柱体（立体：顶面 + 正面受光 + 高光 + 投影） ========== */
+.podium-bar {
+  position: relative;
+  width: 176rpx;
+  border-radius: 14rpx 14rpx 0 0;
+  text-align: center;
+  padding: 38rpx 0 18rpx;
+  /* 顶缘高光 + 底部内阴影 + 向左下投射（光源在右上） */
+  box-shadow:
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.55),
+    inset 0 -14rpx 20rpx rgba(90, 60, 10, 0.16),
+    -10rpx 12rpx 26rpx rgba(0, 40, 80, 0.30);
+}
+
+/* 顶面（椭圆受光面） */
+.podium-bar-top {
+  position: absolute;
+  top: -13rpx;
+  left: 0;
+  right: 0;
+  height: 26rpx;
+  border-radius: 50%;
+  z-index: 3;
+}
+
+/* 正面斜向高光（光束打在柱面上的反射） */
+.podium-bar-shine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 14rpx 14rpx 0 0;
+  background: linear-gradient(115deg, transparent 28%, rgba(255, 255, 255, 0.38) 44%, rgba(255, 255, 255, 0.06) 56%, transparent 72%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 名次数字（浮雕感） */
+.podium-bar-num {
+  position: relative;
+  z-index: 2;
+  font-size: calc(52rpx * var(--font-scale, 1));
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 2rpx 0 rgba(255, 255, 255, 0.5), 0 -1rpx 2rpx rgba(80, 50, 0, 0.28);
+}
+
+/* 金银铜：光源自右上，亮部在右上，暗部在左下 */
+.bar-1 {
+  height: 148rpx;
+  background: linear-gradient(225deg, #FFF6D8 0%, #FFE294 28%, #F3CB6D 60%, #D8A33C 100%);
+}
+.bar-2 {
+  height: 108rpx;
+  background: linear-gradient(225deg, #FFFFFF 0%, #EDF2F7 30%, #D4DEE8 65%, #AEBECD 100%);
+}
+.bar-3 {
+  height: 84rpx;
+  background: linear-gradient(225deg, #FBE3C4 0%, #EFC093 30%, #D89B62 62%, #B57A42 100%);
+}
+
+.bar-1 .podium-bar-top { background: linear-gradient(100deg, #FFF9E6 0%, #FFEDB4 55%, #F0CE72 100%); box-shadow: inset 0 2rpx 3rpx rgba(255, 255, 255, 0.9), 0 -2rpx 8rpx rgba(255, 220, 130, 0.4); }
+.bar-2 .podium-bar-top { background: linear-gradient(100deg, #FFFFFF 0%, #F2F6FA 55%, #D8E2EC 100%); box-shadow: inset 0 2rpx 3rpx rgba(255, 255, 255, 0.9), 0 -2rpx 8rpx rgba(220, 230, 240, 0.4); }
+.bar-3 .podium-bar-top { background: linear-gradient(100deg, #FCEBD2 0%, #F3CFA4 55%, #DC9F68 100%); box-shadow: inset 0 2rpx 3rpx rgba(255, 255, 255, 0.85), 0 -2rpx 8rpx rgba(232, 176, 126, 0.4); }
+
+.bar-1 .podium-bar-num { color: #8A5A00; }
+.bar-2 .podium-bar-num { color: #4A5A6A; }
+.bar-3 .podium-bar-num { color: #7A4A28; }
+
+/* ========== 常规排名列表 ========== */
+.rank-list {
+  margin: 28rpx 24rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  border: 2rpx solid var(--color-border);
+}
+
+.rank-row {
+  display: flex;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.rank-row:last-child {
+  border-bottom: none;
+}
+
+.rank-num {
+  width: 72rpx;
+  font-size: calc(32rpx * var(--font-scale, 1));
+  font-weight: 700;
+  color: var(--color-text-hint);
+  text-align: center;
+}
+
+.rank-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  margin-left: 8rpx;
+}
+
+.rank-name {
+  flex: 1;
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  margin-left: 16rpx;
+}
+
+.rank-total {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-right: 16rpx;
+}
+
+/* ========== 点赞按钮（领奖台） ========== */
+.podium-like {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.18);
+  margin-bottom: 16rpx;
+}
+
+.podium-like.liked {
+  background: rgba(255, 100, 100, 0.25);
+}
+
+.podium-like-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.podium-like-num {
+  font-size: calc(22rpx * var(--font-scale, 1));
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1;
+}
+
+/* ========== 点赞按钮（常规排名行） ========== */
+.rank-like-btn {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 24rpx;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.rank-like-btn.liked {
+  background: rgba(255, 80, 80, 0.08);
+  border-color: rgba(255, 80, 80, 0.3);
+}
+
+.like-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.like-count {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  line-height: 1;
+  min-width: 20rpx;
+}
+
+.rank-like-btn.liked .like-count {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* ========== 底部固定栏：我的排名 + 类型切换 ========== */
+.rank-bottom-bar {
+  position: fixed;
+  bottom: calc(100rpx + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  background: var(--color-card);
+  border-top: 2rpx solid var(--color-primary);
+  box-shadow: 0 -4rpx 24rpx rgba(0, 61, 102, 0.1);
+  z-index: 100;
+}
+
+.my-rank-info-row {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx 12rpx;
+}
+
+.my-rank-num {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  font-weight: 700;
+  color: var(--color-primary);
+  width: 160rpx;
+}
+
+.my-rank-info {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text);
+}
+
+.my-rank-count {
+  color: var(--color-text-secondary);
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.guest-tip-inline {
+  padding: 20rpx 32rpx 12rpx;
+  text-align: center;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+}
+
+/* 排行榜类型切换 Tab */
+.rank-tab-switch {
+  display: flex;
+  padding: 0 32rpx 20rpx;
+  gap: 24rpx;
+}
+
+.rank-tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: var(--color-text-hint);
+  background: var(--color-bg);
+  border-radius: 16rpx;
+  transition: all 0.25s ease;
+}
+
+.rank-tab.active {
+  color: #fff;
+  background: var(--color-primary);
+  font-weight: 700;
+}
+
+/* 主题切换期间禁用 .rank-tab 的 transition：
+   .rank-tab 默认有 transition: all 0.25s ease（用于 active 切换的平滑效果），
+   但深→浅主题切换时 darkMode 立即变 false，CSS 变量瞬间切到浅色，
+   transition 会让 background 从深色慢慢渐变到浅色（0.25s），
+   用户透过收缩的 dark-layer 圆孔看到标签"慢半拍"变色，产生延迟感。
+   themeAnimating 仅在主题切换的 550ms 内为 true，结束后规则自动失效，
+   active 切换的过渡动画不受影响。 */
+.rank-page.light-layer.theme-animating .rank-tab {
+  transition: none !important;
+}
+
+/* ========== 深色模式 ========== */
+.rank-page.dark {
+  --color-primary: #4A9FE0;
+  --color-primary-light: #2A7FCC;
+  --color-text: #E8E8F0;
+  --color-text-secondary: #AABBDD;
+  --color-text-hint: #7788AA;
+  --color-bg: #1A1A2E;
+  --color-card: #252540;
+  --color-border: #353560;
+}
+
+/* ========== 深色模式：月光光源 + 立体柱体 ========== */
+.rank-page.dark .podium {
+  background:
+    radial-gradient(115% 85% at 88% -12%, rgba(196, 222, 255, 0.32) 0%, rgba(150, 190, 235, 0.10) 42%, transparent 64%),
+    linear-gradient(165deg, #0D1B2A 0%, #1B3358 45%, #2A5275 75%, #1A1A2E 100%);
+}
+
+/* 月光束（冷白色） */
+.rank-page.dark .light-beam {
+  background: linear-gradient(180deg, rgba(205, 225, 255, 0.16) 0%, rgba(205, 225, 255, 0.05) 45%, transparent 85%);
+}
+
+/* 月光下的金银铜：金属色压暗，保留质感 */
+.rank-page.dark .podium-bar {
+  box-shadow:
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.22),
+    inset 0 -14rpx 20rpx rgba(0, 0, 0, 0.35),
+    -10rpx 12rpx 26rpx rgba(0, 0, 0, 0.5);
+}
+
+.rank-page.dark .podium-bar-shine {
+  background: linear-gradient(115deg, transparent 28%, rgba(255, 255, 255, 0.16) 44%, rgba(255, 255, 255, 0.03) 56%, transparent 72%);
+}
+
+.rank-page.dark .bar-1 { background: linear-gradient(225deg, #9A8436 0%, #6E5C28 30%, #4E411E 65%, #372E15 100%); }
+.rank-page.dark .bar-2 { background: linear-gradient(225deg, #7E8DA0 0%, #5F6E80 30%, #46525F 65%, #333D48 100%); }
+.rank-page.dark .bar-3 { background: linear-gradient(225deg, #A07048 0%, #7E5836 30%, #5C4026 65%, #422E1B 100%); }
+
+.rank-page.dark .bar-1 .podium-bar-top { background: linear-gradient(100deg, #C4A94E 0%, #9A8436 55%, #6E5C28 100%); box-shadow: inset 0 2rpx 3rpx rgba(255, 255, 255, 0.35); }
+.rank-page.dark .bar-2 .podium-bar-top { background: linear-gradient(100deg, #A6B4C4 0%, #7E8DA0 55%, #5F6E80 100%); box-shadow: inset 0 2rpx 3rpx rgba(255, 255, 255, 0.35); }
+.rank-page.dark .bar-3 .podium-bar-top { background: linear-gradient(100deg, #C4906A 0%, #A07048 55%, #7E5836 100%); box-shadow: inset 0 2rpx 3rpx rgba(255, 255, 255, 0.3); }
+
+.rank-page.dark .podium-bar-num {
+  color: #F5E6B8;
+  text-shadow: 0 2rpx 0 rgba(0, 0, 0, 0.45), 0 -1rpx 2rpx rgba(255, 255, 255, 0.12);
+}
+.rank-page.dark .bar-2 .podium-bar-num { color: #E8EEF5; }
+.rank-page.dark .bar-3 .podium-bar-num { color: #F0D3B0; }
+
+/* 月光下的头像环光晕减弱 */
+.rank-page.dark .rank-1 .podium-avatar-img { box-shadow: 0 0 20rpx rgba(255, 213, 79, 0.35), 0 4rpx 12rpx rgba(0, 0, 0, 0.4); }
+.rank-page.dark .rank-2 .podium-avatar-img { box-shadow: 0 0 14rpx rgba(220, 230, 240, 0.25), 0 4rpx 12rpx rgba(0, 0, 0, 0.4); }
+.rank-page.dark .rank-3 .podium-avatar-img { box-shadow: 0 0 14rpx rgba(232, 176, 126, 0.25), 0 4rpx 12rpx rgba(0, 0, 0, 0.4); }
+
+.rank-page.dark .rank-bottom-bar {
+  background: #252540;
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 底栏独立深色模式：
+   .rank-bottom-bar 是 position:fixed，跳出 dark-layer 的 clip-path 裁剪，
+   不能依赖 dark-layer 覆盖来呈现深色。改为元素自身挂 .dark class（由 darkMode 立即驱动）。
+   通过覆盖 CSS 变量 + 直接样式，让底栏及其子元素立即应用深色。 */
+.rank-bottom-bar.dark {
+  --color-primary: #4A9FE0;
+  --color-text: #E8E8F0;
+  --color-text-secondary: #AABBDD;
+  --color-text-hint: #7788AA;
+  --color-bg: #1A1A2E;
+  background: #252540;
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.rank-bottom-bar.dark .rank-tab {
+  background: #1A1A2E;
+}
+
+.rank-page.dark .rank-tab {
+  background: #1A1A2E;
+}
+
+/* ========== 深色模式：点赞按钮 ========== */
+.rank-page.dark .rank-like-btn {
+  background: #1A1A2E;
+  border-color: #353560;
+}
+
+.rank-page.dark .rank-like-btn.liked {
+  background: rgba(255, 80, 80, 0.12);
+  border-color: rgba(255, 80, 80, 0.35);
+}
+
+.rank-page.dark .like-count {
+  color: #AABBDD;
+}

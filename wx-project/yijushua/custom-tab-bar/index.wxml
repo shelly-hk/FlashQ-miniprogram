@@ -1,0 +1,22 @@
+<!--
+  自定义底部导航栏
+  --------------------------------------------------
+  指示器直接定位到选中标签，无滑动动画
+-->
+<view class="tab-bar {{darkMode ? 'dark' : ''}}">
+  <!-- 指示背景（通过 CSS 百分比定位，无需 JS 测量） -->
+  <view class="tab-indicator indicator-{{selected}}"></view>
+
+  <!-- 标签项 -->
+  <view
+    wx:for="{{tabs}}"
+    wx:for-index="idx"
+    wx:key="pagePath"
+    class="tab-item {{selected === idx ? 'tab-active' : ''}}"
+    data-index="{{idx}}"
+    catchtap="onTabTap"
+  >
+    <image class="tab-icon" src="{{selected === idx ? item.activeIcon : item.icon}}"></image>
+    <text class="tab-text">{{item.text}}</text>
+  </view>
+</view>

@@ -1,0 +1,338 @@
+/**
+ * 专项复习选择页样式
+ */
+
+.review-page {
+  min-height: 100vh;
+  padding: 0 48rpx;
+  box-sizing: border-box;
+  background:
+    radial-gradient(85% 45% at 85% -8%, rgba(10, 186, 181, 0.10) 0%, transparent 60%),
+    linear-gradient(180deg, #EDF8F7 0%, #E8F6F5 45%, #E4F3F1 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.review-page.dark {
+  background:
+    radial-gradient(85% 45% at 85% -8%, rgba(43, 200, 196, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, #1E2C2E 0%, #1A2628 45%, #162122 100%);
+}
+
+/* ========== 顶部标题 ========== */
+.review-header {
+  padding: 116rpx 0 52rpx;
+}
+
+.review-title {
+  display: block;
+  font-size: calc(44rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: #2D3A3A;
+  letter-spacing: 4rpx;
+  margin-bottom: 12rpx;
+}
+
+.review-subtitle {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: #6B9F9C;
+  letter-spacing: 2rpx;
+}
+
+.review-page.dark .review-title { color: #E8E8F0; }
+.review-page.dark .review-subtitle { color: #8888AA; }
+
+/* ========== 分组 ========== */
+.review-group {
+  margin-bottom: 16rpx;
+}
+
+.group-label {
+  display: flex;
+  align-items: center;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: #6B9F9C;
+  letter-spacing: 2rpx;
+  margin-bottom: 20rpx;
+}
+
+/* 分组标签前的装饰条：错题本=红、收藏夹=金 */
+.group-label::before {
+  content: '';
+  width: 8rpx;
+  height: 28rpx;
+  border-radius: 4rpx;
+  margin-right: 14rpx;
+  background: #2D9F9A;
+  opacity: 0.8;
+}
+
+.review-group:nth-of-type(1) .group-label::before { background: #E05858; }
+.review-group:nth-of-type(2) .group-label::before { background: #F5A623; }
+
+.review-page.dark .group-label { color: #6B8E8C; }
+
+/* ========== 卡片列表 ========== */
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.review-card {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  padding: 32rpx 36rpx;
+  border: 1rpx solid #C8E6E4;
+  /* 抬起复原时 Q 弹回弹（带轻微过冲） */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.26s ease, border-color 0.26s ease,
+              box-shadow 0.26s ease, opacity 0.26s ease;
+  box-shadow: 0 4rpx 20rpx rgba(10, 186, 181, 0.07);
+}
+
+.review-page.dark .review-card {
+  background: #243335;
+  border-color: #2A3A3C;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.2);
+}
+
+/* 按压反馈：瞬间缩小 + 品牌蓝高亮 */
+.hover-card {
+  transform: scale(0.96);
+  background: rgba(135, 206, 235, 0.30) !important;
+  border-color: rgba(135, 206, 235, 0.85);
+  box-shadow: 0 6rpx 20rpx rgba(135, 206, 235, 0.35);
+  opacity: 1;
+  transition-duration: 0.04s;
+}
+
+/* 深色模式按压（品牌蓝 #64B5F6 系） */
+.review-page.dark .review-card.hover-card {
+  background: rgba(100, 181, 246, 0.22) !important;
+  border-color: rgba(100, 181, 246, 0.70);
+  box-shadow: 0 6rpx 20rpx rgba(100, 181, 246, 0.30);
+}
+
+/* 卡片图标瓷砖：错题本组偏红、收藏夹组偏金 */
+.review-icon {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-right: 28rpx;
+  background: rgba(10, 186, 181, 0.1);
+  box-shadow: inset 0 1rpx 2rpx rgba(255, 255, 255, 0.9);
+}
+
+.review-group:nth-of-type(1) .review-icon { background: rgba(224, 88, 88, 0.1); }
+.review-group:nth-of-type(2) .review-icon { background: rgba(245, 166, 35, 0.12); }
+
+.review-page.dark .review-group:nth-of-type(1) .review-icon { background: rgba(224, 88, 88, 0.14); }
+.review-page.dark .review-group:nth-of-type(2) .review-icon { background: rgba(245, 166, 35, 0.14); }
+
+.review-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.review-name {
+  font-size: calc(32rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: #2D3A3A;
+}
+
+.review-desc {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: #6B9F9C;
+}
+
+.review-page.dark .review-name { color: #E8E8F0; }
+.review-page.dark .review-desc { color: #6B8E8C; }
+
+.review-arrow {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: rgba(10, 186, 181, 0.08);
+  color: #2D9F9A;
+  font-size: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 4rpx;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.review-page.dark .review-arrow {
+  background: rgba(43, 200, 196, 0.12);
+  color: #2BC8C4;
+}
+
+/* ========== 筛选弹窗 ========== */
+.filter-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.filter-sheet {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 20rpx 48rpx 40rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  animation: slideUp 0.25s ease;
+}
+
+/* 顶部小横条（抓手） */
+.filter-sheet::before {
+  content: '';
+  display: block;
+  width: 72rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: #E0E6E6;
+  margin: 0 auto 20rpx;
+}
+
+.filter-sheet.dark::before {
+  background: #3A4A4C;
+}
+
+.filter-sheet.dark {
+  background: #243335;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.sheet-title {
+  font-size: calc(34rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: #2D3A3A;
+}
+
+.filter-sheet.dark .sheet-title { color: #E8E8F0; }
+
+.sheet-close {
+  font-size: 36rpx;
+  color: #999;
+  padding: 8rpx 16rpx;
+}
+
+.filter-sheet.dark .sheet-close { color: #666; }
+
+.sheet-hint {
+  display: block;
+  font-size: calc(25rpx * var(--font-scale, 1));
+  color: #6B9F9C;
+  margin-bottom: 32rpx;
+  line-height: 1.5;
+}
+
+.filter-sheet.dark .sheet-hint { color: #6B8E8C; }
+
+.sheet-scroll {
+  max-height: 600rpx;
+}
+
+.sheet-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.sheet-tab {
+  padding: 18rpx 36rpx;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  border-radius: 32rpx;
+  background: #F0F8F7;
+  color: #4A7A78;
+  border: 2rpx solid #C8E6E4;
+  /* 抬起复原时 Q 弹回弹 */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.26s ease, border-color 0.26s ease,
+              box-shadow 0.26s ease, opacity 0.26s ease;
+}
+
+/* 弹窗选项按压反馈：瞬间缩小（较圆润的小控件幅度略大） */
+.sheet-tab.hover-pill {
+  transform: scale(0.93);
+  filter: brightness(0.96);
+  opacity: 1;
+  transition-duration: 0.04s;
+}
+
+.sheet-tab.sheet-tab-active {
+  background: linear-gradient(135deg, #35B0AA 0%, #2D9F9A 100%);
+  color: #FFFFFF;
+  font-weight: 500;
+  border-color: transparent;
+  box-shadow: 0 4rpx 14rpx rgba(45, 159, 154, 0.3);
+}
+
+.filter-sheet.dark .sheet-tab {
+  background: #2A3A3C;
+  color: #AABBCC;
+  border-color: #3A4A4C;
+}
+
+.filter-sheet.dark .sheet-tab.sheet-tab-active {
+  background: #2D9F9A;
+  color: #FFFFFF;
+}
+
+.sheet-btn {
+  margin-top: 40rpx;
+  text-align: center;
+  background: linear-gradient(135deg, #35B0AA 0%, #2D9F9A 100%);
+  color: #FFFFFF;
+  font-size: calc(32rpx * var(--font-scale, 1));
+  font-weight: 600;
+  padding: 26rpx 0;
+  border-radius: 48rpx;
+  box-shadow: 0 8rpx 24rpx rgba(45, 159, 154, 0.35);
+  /* 抬起复原时 Q 弹回弹 */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.26s ease, opacity 0.26s ease;
+}
+
+/* 开始复习按钮按压反馈 */
+.sheet-btn.hover-btn {
+  transform: scale(0.95);
+  filter: brightness(0.96);
+  opacity: 1;
+  transition-duration: 0.04s;
+}
+
+.filter-sheet.dark .sheet-btn {
+  background: #2D9F9A;
+}

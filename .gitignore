@@ -1,0 +1,79 @@
+# ===== 备份目录（全部不传） =====
+_backup_*/
+_reveal_backup/
+_pdf_build/
+_scripts_archive/
+团队创作聊天记录/
+
+# ===== Java / Maven 后端 =====
+FlashQ/target/
+FlashQ/logs/
+FlashQ/uploads/
+FlashQ/.idea/
+FlashQ/.paddlex_cache/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/*.jar
+
+# ===== 微信小程序 =====
+node_modules/
+project.private.config.json
+project.private.config.json.bak
+miniprogram_npm/
+.cache/
+
+# ===== 编辑器 / 系统 =====
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ===== 压缩包 / 临时文件 =====
+*.zip
+*.rar
+*.7z
+*.log
+
+# ===== 本地敏感配置（环境变量已注入，这里兜底） =====
+application-local.yaml
+application-local.yml
+application-local.properties
+*.local
+.env
+.env.*
+
+# ===== Python OCR =====
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ===== SSL 证书私钥（绝不能传） =====
+*.key
+*.key.pem
+*.p12
+*.jks
+wx-project/api.flashq.site_nginx/
+
+# ===== 页面备份文件 =====
+*.bak-*
+*.bak
+
+# ===== 用户上传/测试素材 =====
+user-upload
+promo-video/user-upload
+
+# ===== 杂项目录（本地保留，不传仓库） =====
+杂项文件/
+
+# ===== wx-project 下非小程序代码的文档和素材 =====
+wx-project/bgm-server-files/
+wx-project/api.flashq.site_nginx/
+wx-project/*.md
+wx-project/*.docx
+wx-project/*.txt
+wx-project/*.jpg
+wx-project/*.png
+wx-project/*.html

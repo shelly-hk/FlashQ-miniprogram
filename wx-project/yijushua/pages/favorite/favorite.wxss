@@ -1,0 +1,754 @@
+/**
+ * 收藏列表页面样式
+ * --------------------------------------------------
+ * 优化：卡片统一阴影圆角、字号层级清晰
+ */
+
+/* ========== 色彩体系（收藏页局部覆盖） ==========
+ * 主色：捣蓝色  #2B6CB0 → 做主交互色
+ * 辅色：清水蓝  #DCEEF7 → 做背景
+ */
+.favorite-page {
+  --color-primary: #2B6CB0;
+  --color-text: #1A3A5C;
+  --color-text-secondary: #4A7BA8;
+  --color-text-hint: #6B9BC4;
+  --color-bg: #DCEEF7;
+  --color-card: #FFFFFF;
+  --color-border: #B8DCF0;
+
+  min-height: 100vh;
+  background:
+    radial-gradient(85% 40% at 50% -8%, rgba(255, 255, 255, 0.5) 0%, transparent 62%),
+    linear-gradient(180deg, #E6F2FA 0%, #DCEEF7 45%, #D9EBF6 100%);
+  padding: 24rpx;
+  padding-bottom: 40rpx;
+  box-sizing: border-box;
+}
+
+/* ========== 筛选（科目/分类）：收起态筛选条 + 点击展开面板（参考刷题页） ========== */
+.filter-bar {
+  margin-bottom: 24rpx;
+}
+
+/* 收起态：当前筛选条 */
+.filter-current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 20rpx 28rpx;
+  box-shadow: 0 6rpx 24rpx rgba(43, 108, 176, 0.08);
+  border: 1rpx solid rgba(43, 108, 176, 0.22);
+}
+
+.filter-icon {
+  font-size: 30rpx;
+  line-height: 1;
+}
+
+.filter-text {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.filter-arrow {
+  font-size: 28rpx;
+  color: var(--color-primary);
+  transform: rotate(90deg);
+  transition: transform 0.25s;
+}
+
+.filter-arrow.arrow-up {
+  transform: rotate(-90deg);
+}
+
+/* 展开态：筛选面板 */
+.filter-panel {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 32rpx;
+  margin-top: 20rpx;
+  box-shadow: 0 6rpx 24rpx rgba(43, 108, 176, 0.08);
+  border: 1rpx solid rgba(43, 108, 176, 0.22);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-16rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.filter-section {
+  margin-bottom: 0;
+}
+
+/* 小节标题：带主色竖线装饰 */
+.filter-label {
+  display: flex;
+  align-items: center;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: var(--color-text-hint);
+  margin-bottom: 20rpx;
+  letter-spacing: 2rpx;
+}
+
+.filter-label::before {
+  content: '';
+  width: 8rpx;
+  height: 26rpx;
+  border-radius: 4rpx;
+  background: var(--color-primary);
+  margin-right: 14rpx;
+  opacity: 0.75;
+}
+
+/* 筛选项：换行平铺（与刷题页 filter-options 一致） */
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx;
+}
+
+.filter-pill {
+  padding: 18rpx 36rpx;
+  background: var(--color-bg);
+  border: 1rpx solid transparent;
+  border-radius: 16rpx;
+  font-size: calc(27rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  /* 抬起复原时 Q 弹回弹（带轻微过冲） */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.26s ease, border-color 0.26s ease,
+              box-shadow 0.26s ease, color 0.26s ease;
+}
+
+/* 按压反馈：瞬间缩小 + 轻微变暗 */
+.chip-hover {
+  transform: scale(0.93);
+  filter: brightness(0.96);
+  transition-duration: 0.04s;
+}
+
+.filter-pill.pill-active {
+  background: linear-gradient(135deg, #3D82D0 0%, #2B6CB0 100%);
+  color: #ffffff;
+  border-color: transparent;
+  font-weight: 500;
+  box-shadow: 0 6rpx 18rpx rgba(43, 108, 176, 0.32);
+}
+
+/* ========== 分页控件 ========== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32rpx;
+  padding: 32rpx 0 16rpx;
+}
+
+.page-btn {
+  padding: 16rpx 40rpx;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  border-radius: 32rpx;
+  background: var(--color-card);
+  color: var(--color-primary);
+  border: 2rpx solid rgba(43, 108, 176, 0.35);
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.page-btn.btn-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.page-info {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ========== Tab 切换（分段选择器） ========== */
+.fav-tabs {
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 24rpx;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 18rpx;
+  padding: 8rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.8);
+}
+
+.fav-tab {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  font-size: calc(29rpx * var(--font-scale, 1));
+  border-radius: 12rpx;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 2rpx solid transparent;
+  transition: all 0.25s;
+  font-weight: 500;
+}
+
+.fav-tab.tab-active {
+  background: linear-gradient(135deg, #3D82D0 0%, #2B6CB0 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4rpx 14rpx rgba(43, 108, 176, 0.3);
+}
+
+/* ========== 公共题库二级分类（细分随机/代码/面试） ========== */
+.sub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.sub-tab {
+  padding: 12rpx 26rpx;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1rpx solid rgba(255, 255, 255, 0.8);
+  border-radius: 30rpx;
+  transition: all 0.25s;
+  font-weight: 500;
+}
+
+.sub-tab.sub-tab-active {
+  background: linear-gradient(135deg, #3D82D0 0%, #2B6CB0 100%);
+  color: #ffffff;
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: 0 4rpx 12rpx rgba(43, 108, 176, 0.28);
+}
+
+/* ========== 顶部统计 ========== */
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8rpx 24rpx;
+}
+
+.header-total {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.header-hint {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+}
+
+.header-manage {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  padding: 10rpx 28rpx;
+  border: 2rpx solid rgba(43, 108, 176, 0.4);
+  border-radius: 24rpx;
+  background: rgba(43, 108, 176, 0.06);
+  font-weight: 500;
+}
+
+/* ========== 批量操作工具栏 ========== */
+.batch-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 8rpx 24rpx;
+  gap: 16rpx;
+}
+
+.batch-select-all {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  border-radius: 32rpx;
+  background: var(--color-card);
+  color: var(--color-text);
+  border: 2rpx solid var(--color-border);
+  font-weight: 500;
+}
+
+.batch-remove {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, #FF6B7A 0%, #EE0A24 100%);
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 6rpx 18rpx rgba(238, 10, 36, 0.25);
+}
+
+.batch-remove.btn-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ========== 收藏卡片 ========== */
+.favorite-card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  transition: all 0.25s ease;
+  box-shadow: 0 6rpx 24rpx rgba(43, 108, 176, 0.08);
+  border: 1rpx solid rgba(43, 108, 176, 0.22);
+  border-left: 6rpx solid rgba(245, 166, 35, 0.55);
+}
+
+.favorite-card.expanded {
+  box-shadow: var(--shadow-hover);
+}
+
+.favorite-card.selected {
+  border-color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  background: rgba(43, 108, 176, 0.06);
+}
+
+/* 选择框（管理模式） */
+.card-checkbox {
+  position: absolute;
+  top: 28rpx;
+  right: 28rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  border: 3rpx solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 1;
+}
+
+.card-checkbox.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.check-icon {
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.favorite-card {
+  position: relative;
+}
+
+/* 卡片顶部：标签 + 取消收藏按钮 */
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20rpx;
+}
+
+.card-tags {
+  display: flex;
+  gap: 16rpx;
+}
+
+.tag {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  padding: 8rpx 20rpx;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.tag-subject {
+  background: #e8f3ff;
+  color: var(--color-primary);
+}
+
+.tag-difficulty {
+  background: #fff5e6;
+  color: var(--color-warning);
+}
+
+.tag-type {
+  background: linear-gradient(135deg, #0ABAB5, #06d6a0);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tag-source {
+  background: #e8e0ff;
+  color: #6c5ce7;
+  font-weight: 500;
+}
+
+.remove-btn {
+  font-size: 24rpx;
+  color: var(--color-danger);
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  background: rgba(238, 10, 36, 0.06);
+  flex-shrink: 0;
+}
+
+/* 题干 */
+.card-question {
+  font-size: calc(32rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  line-height: 1.7;
+  font-weight: 500;
+}
+
+/* 收起时的简短信息（小药丸） */
+.card-brief {
+  margin-top: 20rpx;
+  font-size: calc(26rpx * var(--font-scale, 1));
+}
+
+.brief-answer {
+  color: var(--color-success);
+  background: #e7f8ee;
+  border-radius: 10rpx;
+  padding: 8rpx 20rpx;
+}
+
+/* ========== 展开后的选项 ========== */
+.card-options {
+  margin-top: 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.card-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-radius: var(--radius-sm);
+  border: 2rpx solid var(--color-border);
+  background: #fafafa;
+}
+
+.opt-text {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.opt-mark {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: var(--radius-sm);
+  margin-left: 16rpx;
+  font-weight: 500;
+}
+
+/* 正确答案 → 绿色 */
+.card-option.opt-correct {
+  border-color: var(--color-success);
+  background: #e7f8ee;
+}
+
+.card-option.opt-correct .opt-text {
+  color: var(--color-success);
+}
+
+.opt-mark-correct {
+  background: var(--color-success);
+  color: #fff;
+}
+
+/* ========== 解析 ========== */
+.card-explanation {
+  margin-top: 28rpx;
+  background: #f9f9fb;
+  border-radius: var(--radius-sm);
+  padding: 28rpx;
+  border-left: 8rpx solid var(--color-primary);
+}
+
+.explanation-label {
+  display: block;
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.explanation-text {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+/* ========== 加载/空状态 ========== */
+.loading-tip {
+  text-align: center;
+  padding: 32rpx 0;
+  color: var(--color-text-hint);
+  font-size: 26rpx;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 110rpx 0 140rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ========== 空状态插画：等待被点亮的星形徽章 + 双层星轨光环 ========== */
+.empty-illust {
+  position: relative;
+  width: 260rpx;
+  height: 230rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 36rpx;
+}
+
+.empty-illust-orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 230rpx;
+  height: 230rpx;
+  margin: -115rpx 0 0 -115rpx;
+  border-radius: 50%;
+  border: 3rpx dashed rgba(245, 166, 35, 0.32);
+  animation: emptyOrbit 18s linear infinite;
+}
+
+.empty-illust-orbit-2 {
+  width: 180rpx;
+  height: 180rpx;
+  margin: -90rpx 0 0 -90rpx;
+  border-color: rgba(245, 166, 35, 0.18);
+  border-style: solid;
+  border-width: 2rpx;
+  animation-duration: 12s;
+  animation-direction: reverse;
+}
+
+@keyframes emptyOrbit {
+  to { transform: rotate(360deg); }
+}
+
+/* 中央星形徽章（虚线圆环里等待被点亮的状态） */
+.empty-illust-star {
+  position: relative;
+  z-index: 1;
+  width: 132rpx;
+  height: 132rpx;
+  border-radius: 36rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF7E5 100%);
+  box-shadow:
+    0 16rpx 36rpx rgba(245, 166, 35, 0.26),
+    inset 0 2rpx 6rpx rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: emptyStarFloat 3.6s ease-in-out infinite;
+}
+
+@keyframes emptyStarFloat {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-10rpx) rotate(2deg); }
+}
+
+.empty-illust-star-inner {
+  font-size: 78rpx;
+  color: rgba(245, 166, 35, 0.6);
+  line-height: 1;
+  text-shadow: 0 4rpx 12rpx rgba(245, 166, 35, 0.3);
+  animation: emptyStarPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes emptyStarPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.08); }
+}
+
+/* 星形上的扫光高光 */
+.empty-illust-star-shine {
+  position: absolute;
+  top: 0;
+  left: -80%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 230, 150, 0.5) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  animation: emptyStarShine 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes emptyStarShine {
+  0%   { left: -80%; }
+  60%  { left: 110%; }
+  100% { left: 110%; }
+}
+
+.empty-illust-spark {
+  position: absolute;
+  color: rgba(245, 166, 35, 0.55);
+  line-height: 1;
+  animation: emptySparkFloat 3.4s ease-in-out infinite;
+}
+
+.empty-illust-spark.spark-1 { top: -8rpx;  right: 24rpx; font-size: 22rpx; }
+.empty-illust-spark.spark-2 { bottom: 14rpx; left: 12rpx;  font-size: 18rpx; animation-delay: 1.1s; }
+.empty-illust-spark.spark-3 { top: 50rpx;   right: -10rpx; font-size: 16rpx; animation-delay: 1.8s; color: rgba(245, 166, 35, 0.7); }
+.empty-illust-spark.spark-4 { bottom: 30rpx; right: 24rpx; font-size: 14rpx; animation-delay: 0.7s; color: rgba(245, 166, 35, 0.5); }
+
+@keyframes emptySparkFloat {
+  0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+  50%      { transform: translate(3rpx, -5rpx); opacity: 1; }
+}
+
+/* 文案 */
+.empty-title {
+  font-size: calc(34rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 1rpx;
+  margin-bottom: 12rpx;
+}
+
+.empty-text {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  letter-spacing: 1rpx;
+  max-width: 480rpx;
+  margin: 0 0 28rpx;
+}
+
+/* 提示行（圆点 + 引导文案） */
+.empty-tip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 14rpx 26rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.08) 0%, rgba(245, 166, 35, 0.04) 100%);
+  border: 2rpx solid rgba(245, 166, 35, 0.16);
+}
+
+.empty-tip-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFD54F 0%, #F5A623 100%);
+  box-shadow: 0 0 8rpx rgba(245, 166, 35, 0.55);
+  flex-shrink: 0;
+}
+
+.empty-hint {
+  font-size: 24rpx;
+  color: var(--color-text-hint, #999);
+  letter-spacing: 1rpx;
+  line-height: 1.4;
+}
+
+/* ========== 深色模式 ========== */
+.favorite-page.dark {
+  /* 深色背景：显式覆盖日间硬编码渐变，否则深模式下会发白 */
+  background:
+    radial-gradient(85% 40% at 50% -8%, rgba(74, 159, 224, 0.10) 0%, transparent 62%),
+    linear-gradient(180deg, #20244A 0%, #1A1A2E 45%, #15152B 100%);
+  --color-primary: #4A9FE0;
+  --color-text: #E8E8F0;
+  --color-text-secondary: #AABBDD;
+  --color-text-hint: #7788AA;
+  --color-bg: #1A1A2E;
+  --color-card: #252540;
+  --color-border: #353560;
+}
+
+.favorite-page.dark .fav-tabs {
+  background: rgba(37, 37, 64, 0.55);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.favorite-page.dark .sub-tab {
+  background: rgba(37, 37, 64, 0.55);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+}
+
+.favorite-page.dark .brief-answer {
+  background: rgba(94, 234, 212, 0.1);
+}
+
+.favorite-page.dark .empty-icon {
+  background: linear-gradient(135deg, #2E3A55 0%, #26304A 100%);
+  box-shadow: inset 0 2rpx 4rpx rgba(255, 255, 255, 0.06);
+}
+
+.favorite-page.dark .remove-btn {
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.favorite-page.dark .header-manage {
+  background: rgba(74, 159, 224, 0.1);
+  border-color: rgba(74, 159, 224, 0.4);
+}
+
+.favorite-page.dark .card-option {
+  background: #252540;
+  border-color: #353560;
+}
+
+.favorite-page.dark .card-option.opt-correct {
+  background: rgba(94, 234, 212, 0.08);
+}
+
+.favorite-page.dark .card-explanation {
+  background: #20203A;
+}
+
+.favorite-page.dark .tag-subject {
+  background: rgba(74, 159, 224, 0.15);
+}
+
+.favorite-page.dark .tag-difficulty {
+  background: rgba(255, 193, 7, 0.12);
+}
+
+.favorite-page.dark .empty-hint {
+  color: #555570;
+}
+
+.favorite-page.dark .filter-panel {
+  background: #252540;
+  border-color: #353560;
+}
+
+.favorite-page.dark .filter-pill {
+  background: #353560;
+  color: #E8E8F0;
+}
+
+.favorite-page.dark .filter-pill.pill-active {
+  background: linear-gradient(135deg, #4A9FE0 0%, #2B6CB0 100%);
+  color: #ffffff;
+}
+
+.favorite-page.dark .page-btn {
+  background: #252540;
+}

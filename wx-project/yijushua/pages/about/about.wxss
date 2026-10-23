@@ -1,0 +1,298 @@
+/**
+ * 关于页面样式
+ * --------------------------------------------------
+ * 优化：使用全局 CSS 变量保持视觉一致
+ */
+
+.about-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(85% 40% at 50% -8%, rgba(255, 255, 255, 0.6) 0%, transparent 62%),
+    linear-gradient(180deg, #F3F7FB 0%, #F5F6F8 45%, #F1F4F8 100%);
+  padding-bottom: 60rpx;
+}
+
+/* 深色模式：显式覆盖日间渐变背景（.about-page 同时是深色容器） */
+.about-page.dark {
+  background:
+    radial-gradient(85% 40% at 50% -8%, rgba(74, 159, 224, 0.08) 0%, transparent 62%),
+    linear-gradient(180deg, #20244A 0%, #1A1A2E 45%, #15152B 100%);
+}
+
+/* ========== 应用信息 ========== */
+.app-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 90rpx 0 72rpx;
+  background: linear-gradient(160deg, #f0f7ff 0%, #e3f2fd 50%, #dbeeff 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 极淡磨砂肌理 */
+.app-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.6) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(30,136,229,0.04) 0%, transparent 35%);
+  pointer-events: none;
+}
+
+/* 底部过渡微光 */
+.app-info::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64rpx;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.3));
+  pointer-events: none;
+}
+
+.app-logo,
+.app-logo-img {
+  position: relative;
+  z-index: 1;
+}
+
+.app-logo {
+  width: 144rpx;
+  height: 144rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72rpx;
+  margin-bottom: 28rpx;
+  box-shadow:
+    0 0 48rpx rgba(30,136,229,0.2),
+    0 8rpx 32rpx rgba(0,57,69,0.15);
+}
+
+.app-logo-img {
+  width: 144rpx;
+  height: 144rpx;
+  border-radius: 28rpx;
+  margin-bottom: 28rpx;
+  box-shadow:
+    0 0 48rpx rgba(30,136,229,0.2),
+    0 8rpx 32rpx rgba(0,57,69,0.15);
+}
+
+.app-name {
+  position: relative;
+  z-index: 1;
+  color: #1a3a5c;
+  font-size: calc(40rpx * var(--font-scale, 1));
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  text-shadow: 0 2rpx 12rpx rgba(255,255,255,0.5);
+}
+
+.app-version {
+  position: relative;
+  z-index: 1;
+  color: rgba(26,58,92,0.5);
+  font-size: calc(24rpx * var(--font-scale, 1));
+  margin-top: 14rpx;
+  letter-spacing: 1rpx;
+}
+
+/* ========== 通用区块 ========== */
+.section {
+  margin: 24rpx;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: var(--color-text-hint);
+  margin-bottom: 16rpx;
+  padding-left: 8rpx;
+  letter-spacing: 2rpx;
+}
+
+.section-title::before {
+  content: '';
+  width: 8rpx;
+  height: 26rpx;
+  border-radius: 4rpx;
+  background: var(--color-primary);
+  margin-right: 14rpx;
+  opacity: 0.75;
+}
+
+.section-card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 6rpx 24rpx rgba(25, 118, 210, 0.07);
+  border: 1rpx solid var(--color-border);
+}
+
+/* ========== 信息行 ========== */
+.info-row {
+  display: flex;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  width: 160rpx;
+  flex-shrink: 0;
+}
+
+.info-value {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  flex: 1;
+}
+
+.info-link {
+  color: var(--color-primary);
+}
+
+/* ========== 免责声明 ========== */
+.disclaimer-text {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  padding: 32rpx;
+}
+
+/* ========== 法律协议 ========== */
+.arrow {
+  font-size: 36rpx;
+  color: var(--color-text-hint);
+  flex-shrink: 0;
+}
+
+.hover-row {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* ========== 联系我们 ========== */
+.contact-section .contact-card {
+  display: flex;
+  align-items: center;
+  padding: 36rpx 32rpx;
+}
+
+.contact-icon {
+  width: 96rpx;
+  height: 96rpx;
+  flex-shrink: 0;
+  margin-right: 28rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52rpx;
+  background: linear-gradient(135deg, #e3f2fd 0%, #fce4ec 100%);
+  box-shadow: 0 6rpx 20rpx rgba(30, 136, 229, 0.12);
+}
+
+.contact-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.contact-name {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 6rpx;
+}
+
+.contact-desc {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  line-height: 1.5;
+  margin-bottom: 14rpx;
+}
+
+.contact-qq-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.contact-qq {
+  font-size: calc(36rpx * var(--font-scale, 1));
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  color: var(--color-primary);
+  font-family: "DIN Alternate", "SF Pro Display", -apple-system, monospace;
+}
+
+.contact-copy-hint {
+  font-size: calc(22rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  background: var(--color-bg);
+}
+
+/* ========== 深色模式：顶部应用信息区背景压暗 ========== */
+.about-page.dark .app-info {
+  background: linear-gradient(160deg, #232336 0%, #1f1f2e 50%, #1b1b28 100%);
+}
+
+.about-page.dark .app-info::before {
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.05) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(58,158,255,0.08) 0%, transparent 35%);
+}
+
+.about-page.dark .app-info::after {
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.2));
+}
+
+.about-page.dark .app-logo {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 0 48rpx rgba(58,158,255,0.18),
+    0 8rpx 32rpx rgba(0,0,0,0.4);
+}
+
+.about-page.dark .app-logo-img {
+  box-shadow:
+    0 0 48rpx rgba(58,158,255,0.18),
+    0 8rpx 32rpx rgba(0,0,0,0.4);
+}
+
+.about-page.dark .app-name {
+  color: #e8e8f0;
+  text-shadow: 0 2rpx 12rpx rgba(0,0,0,0.4);
+}
+
+.about-page.dark .app-version {
+  color: rgba(200,200,220,0.5);
+}
+
+/* 深色模式下：联系卡片图标背景与磨砂适配 */
+.about-page.dark .contact-icon {
+  background: linear-gradient(135deg, #2a2a4a 0%, #3a2a4a 100%);
+  box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.35);
+}
+
+.about-page.dark .contact-copy-hint {
+  background: rgba(255, 255, 255, 0.08);
+}

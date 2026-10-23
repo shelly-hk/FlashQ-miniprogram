@@ -1,0 +1,430 @@
+/**
+ * 设置页面样式
+ * --------------------------------------------------
+ */
+
+/* ========== 色彩体系（设置页局部覆盖） ==========
+ * 主色：涧石蓝  #3D6B7E → 与"我的"页面一致，无缝衔接
+ * 辅色：月白    #E8ECF0 → 柔和冷调背景
+ */
+.settings-page {
+  --color-primary: #3D6B7E;
+  --color-text: #2A4A56;
+  --color-text-secondary: #5A7C8A;
+  --color-text-hint: #8BAAB6;
+  --color-bg: #E8ECF0;
+  --color-card: #FAFBFD;
+  --color-border: #D1D8DF;
+
+  min-height: 100vh;
+  background:
+    radial-gradient(85% 40% at 50% -8%, rgba(255, 255, 255, 0.55) 0%, transparent 62%),
+    linear-gradient(180deg, #EFF3F7 0%, #E8ECF0 45%, #E5EAEE 100%);
+  padding-bottom: 48rpx;
+}
+
+/* ========== 分组标题 ========== */
+.section-title {
+  display: flex;
+  align-items: center;
+  padding: 32rpx 32rpx 16rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--color-text-hint);
+  letter-spacing: 2rpx;
+}
+
+/* 标题前装饰竖线 */
+.section-title::before {
+  content: '';
+  width: 8rpx;
+  height: 26rpx;
+  border-radius: 4rpx;
+  background: var(--color-primary);
+  margin-right: 14rpx;
+  opacity: 0.75;
+}
+
+/* ========== 设置分组 ========== */
+.settings-group {
+  margin: 0 24rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 6rpx 24rpx rgba(61, 107, 126, 0.1);
+  border: 1rpx solid var(--color-border);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32rpx;
+  border-bottom: 1rpx solid var(--color-border);
+  /* 抬起复原时 Q 弹回弹（带轻微过冲） */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.26s ease, border-color 0.26s ease, opacity 0.26s ease;
+}
+
+/* 按压反馈：瞬间缩小 + 品牌蓝高亮（覆盖全局 hover-row 的灰底） */
+.settings-page .settings-item.hover-row {
+  transform: scale(0.97);
+  background: rgba(135, 206, 235, 0.30) !important;
+  transition-duration: 0.04s;
+}
+
+/* 深色模式按压（品牌蓝 #64B5F6 系） */
+.settings-page.dark .settings-item.hover-row {
+  background: rgba(100, 181, 246, 0.22) !important;
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-item-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+/* 设置项图标瓷砖（与"我的"页菜单瓷砖一致） */
+.settings-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  margin-right: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+  flex-shrink: 0;
+  background: rgba(61, 107, 126, 0.09);
+  box-shadow: inset 0 1rpx 2rpx rgba(255, 255, 255, 0.9);
+}
+
+/* 背景音乐图标：琥珀色音符（日间深琥珀 / 深色模式亮琥珀）
+   原 🎵/🎼 emoji 未设显式颜色，部分设备渲染为深色字形，深色模式下看不清 */
+.settings-icon-music {
+  font-size: 38rpx;
+  font-weight: 600;
+  color: #C77800;
+}
+
+.settings-page.dark .settings-icon-music {
+  color: #FFB74D;
+}
+
+.settings-item-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-label {
+  font-size: calc(32rpx * var(--font-scale, 1));
+  color: var(--color-text);
+}
+
+.settings-desc {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  margin-top: 4rpx;
+}
+
+.settings-value {
+  font-size: 28rpx;
+  color: var(--color-text-hint);
+}
+
+.menu-arrow {
+  font-size: 36rpx;
+  color: #ccc;
+}
+
+/* ========== 版本号 ========== */
+.version-info {
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--color-text-hint);
+  margin-top: 64rpx;
+}
+
+/* ========== 停留时间选择 ========== */
+.delay-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.settings-item.delay-row .settings-item-left {
+  margin-bottom: 20rpx;
+}
+
+.delay-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.delay-pill {
+  font-size: 26rpx;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 32rpx;
+  padding: 12rpx 28rpx;
+  transition: all 0.2s;
+}
+
+.delay-pill.pill-active {
+  background: linear-gradient(135deg, #4E8296 0%, #3D6B7E 100%);
+  color: #ffffff;
+  font-weight: 500;
+  border-color: transparent;
+  box-shadow: 0 4rpx 12rpx rgba(61, 107, 126, 0.3);
+}
+
+/* ========== 滑块行（音量） ========== */
+.settings-item.slider-row {
+  padding-top: 24rpx;
+  padding-bottom: 24rpx;
+}
+
+.settings-slider {
+  width: 320rpx;
+  flex-shrink: 0;
+}
+
+/* ========== 背景音乐：展开/收起头部 ========== */
+.bgm-header {
+  cursor: pointer;
+}
+
+.bgm-arrow {
+  font-size: 36rpx;
+  color: var(--color-text-light);
+  transition: transform 0.25s ease;
+  transform: rotate(90deg);
+  line-height: 1;
+}
+
+.bgm-arrow.bgm-arrow-up {
+  transform: rotate(-90deg);
+}
+
+/* ========== 背景音乐选择列表 ========== */
+.bgm-list {
+  display: flex;
+  flex-direction: column;
+  padding: 8rpx 24rpx 24rpx;
+}
+
+.bgm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  margin-top: 12rpx;
+  background: var(--color-border);
+  border-radius: 16rpx;
+  transition: all 0.2s;
+}
+
+.bgm-item.bgm-item-active {
+  background: linear-gradient(135deg, #4E8296 0%, #3D6B7E 100%);
+  box-shadow: 0 4rpx 12rpx rgba(61, 107, 126, 0.3);
+}
+
+.bgm-name {
+  font-size: 28rpx;
+  color: var(--color-text);
+}
+
+.bgm-item.bgm-item-active .bgm-name {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.bgm-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.bgm-preview {
+  font-size: 24rpx;
+  color: var(--color-primary);
+  padding: 6rpx 20rpx;
+  border-radius: 24rpx;
+  background: var(--color-card);
+  border: 1rpx solid var(--color-primary);
+}
+
+.bgm-item.bgm-item-active .bgm-preview {
+  color: var(--color-primary);
+  background: #ffffff;
+}
+
+.bgm-preview.previewing {
+  color: #ffffff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* 选中圆点（深色=已选，显示 ✓；浅色=空） */
+.bgm-dot {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  background: rgba(255, 255, 255, 0.5);
+  border: 2rpx solid var(--color-border);
+  color: transparent;
+}
+
+.bgm-dot.dot-on {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* 随机播放框：固定深色、不可更改 */
+.bgm-item-locked {
+  opacity: 0.92;
+}
+
+.bgm-lock {
+  font-size: 28rpx;
+  color: #ffffff;
+}
+
+/* ========== 深色模式 ========== */
+.settings-page.dark {
+  /* 深色背景：显式覆盖日间硬编码渐变，否则深模式下会发白 */
+  background:
+    radial-gradient(85% 40% at 50% -8%, rgba(74, 159, 224, 0.08) 0%, transparent 62%),
+    linear-gradient(180deg, #20244A 0%, #1A1A2E 45%, #15152B 100%);
+  --color-primary: #4A9FE0;
+  --color-text: #E8E8F0;
+  --color-text-secondary: #AABBDD;
+  /* 对比度修复：原 #7788AA 在 #252540 卡片上仅 3.8:1，低于 WCAG AA
+   * 改为 #9DB2D1 → 在 #252540 卡片上达 5.5:1，通过 AA */
+  --color-text-hint: #9DB2D1;
+  --color-bg: #1A1A2E;
+  --color-card: #252540;
+  --color-border: #353560;
+}
+
+.settings-page.dark .delay-pill {
+  background: #353560;
+}
+
+.settings-page.dark .delay-pill.pill-active {
+  box-shadow: 0 4rpx 12rpx rgba(74, 159, 224, 0.3);
+}
+
+.settings-page.dark .bgm-item {
+  background: #353560;
+}
+
+.settings-page.dark .bgm-preview {
+  background: #252540;
+  border-color: #4A9FE0;
+  color: #4A9FE0;
+}
+
+.settings-page.dark .bgm-item.bgm-item-active .bgm-preview {
+  color: #4A9FE0;
+  background: #ffffff;
+}
+
+.settings-page.dark .bgm-dot {
+  background: #252540;
+  border-color: #4A9FE0;
+}
+
+.settings-page.dark .bgm-dot.dot-on {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #4A9FE0;
+}
+
+.settings-page.dark .menu-arrow {
+  color: #555570;
+}
+
+/* ========== 字号选择（适老化 / 无障碍） ========== */
+.font-scale-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.settings-item.font-scale-row .settings-item-left {
+  margin-bottom: 20rpx;
+}
+
+.font-scale-pills {
+  display: flex;
+  gap: 16rpx;
+}
+
+.font-scale-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  padding: 20rpx 0;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 16rpx;
+  transition: all 0.2s;
+}
+
+.font-scale-pill.pill-active {
+  background: linear-gradient(135deg, #4E8296 0%, #3D6B7E 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4rpx 12rpx rgba(61, 107, 126, 0.3);
+}
+
+/* 用"A"字本身大小直观呈现字号差异（所见即所得） */
+.font-scale-letter {
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1;
+}
+.font-scale-letter.letter-small  { font-size: 24rpx; }
+.font-scale-letter.letter-large { font-size: 40rpx; }
+.font-scale-letter.letter-active { color: #ffffff; }
+
+.font-scale-label {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+}
+
+.font-scale-pill.pill-active .font-scale-label {
+  color: #ffffff;
+}
+
+/* 深色模式 */
+.settings-page.dark .font-scale-pill {
+  background: #353560;
+  border-color: #353560;
+}
+
+.settings-page.dark .font-scale-pill.pill-active {
+  background: linear-gradient(135deg, #5EB3D9 0%, #4A9FE0 100%);
+  box-shadow: 0 4rpx 12rpx rgba(74, 159, 224, 0.3);
+}
+
+.settings-page.dark .font-scale-letter {
+  color: #E8E8F0;
+}
+
+.settings-page.dark .font-scale-pill.pill-active .font-scale-letter {
+  color: #ffffff;
+}

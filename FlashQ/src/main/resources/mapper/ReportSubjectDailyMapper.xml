@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.ReportSubjectDailyMapper">
+
+    <resultMap id="subjectDailyMap" type="com.flashq.entity.ReportSubjectDaily">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="date" column="date"/>
+        <result property="subjectId" column="subject_id"/>
+        <result property="total" column="total"/>
+        <result property="correct" column="correct"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 按用户+日期+科目加行锁查询（事件落库事务内使用） -->
+    <select id="selectForUpdate" resultMap="subjectDailyMap">
+        SELECT * FROM report_subject_daily
+        WHERE user_id = #{userId} AND date = #{date} AND subject_id = #{subjectId}
+        FOR UPDATE
+    </select>
+
+    <!-- 某日全科目明细（快照回溯接口用） -->
+    <select id="selectByUserAndDate" resultMap="subjectDailyMap">
+        SELECT * FROM report_subject_daily
+        WHERE user_id = #{userId} AND date = #{date}
+        ORDER BY total DESC
+    </select>
+
+    <!-- 按科目聚合区间统计（科目正确率接口用，accuracy 精度在 Service 层控制） -->
+    <select id="aggregateRange" resultType="map">
+        SELECT subject_id AS subject_id,
+               COALESCE(SUM(total), 0)   AS total,
+               COALESCE(SUM(correct), 0) AS correct
+        FROM report_subject_daily
+        WHERE user_id = #{userId} AND date BETWEEN #{startDate} AND #{endDate}
+        GROUP BY subject_id
+        ORDER BY total DESC
+    </select>
+
+    <!-- 用户某科目是否已有服务端记录（迁移合并裁决用） -->
+    <select id="existsByUserAndSubject" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM report_subject_daily
+        WHERE user_id = #{userId} AND subject_id = #{subjectId}
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.flashq.entity.ReportSubjectDaily" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO report_subject_daily (user_id, date, subject_id, total, correct)
+        VALUES (#{userId}, #{date}, #{subjectId}, #{total}, #{correct})
+    </insert>
+
+    <update id="updateById" parameterType="com.flashq.entity.ReportSubjectDaily">
+        UPDATE report_subject_daily
+        SET total = #{total},
+            correct = #{correct}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

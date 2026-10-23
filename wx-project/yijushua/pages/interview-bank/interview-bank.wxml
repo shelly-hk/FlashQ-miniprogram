@@ -1,0 +1,92 @@
+<!--
+  企业面试题库入口页
+  --------------------------------------------------
+  两步式：第一步选模式（快速刷/质量刷）→ 第二步选岗位科目
+  面试题展示时会带有企业来源标签（未填写则显示"未知"）
+-->
+
+<view class="bank-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ===== 第一步：选模式 ===== -->
+  <block wx:if="{{step === 'mode'}}">
+    <view class="bank-header">
+      <view class="bank-badge">
+        <view class="bank-badge-glow"></view>
+        <text class="bank-icon">🎯</text>
+      </view>
+      <text class="bank-title">企业面试题库</text>
+      <text class="bank-subtitle">名企真题，校招必备 · 可选岗位科目</text>
+    </view>
+
+    <view class="mode-list">
+      <view class="mode-card" catchtap="onQuick" hover-class="card-hover" hover-stay-time="120">
+        <view class="mode-card-left">
+          <text class="mode-icon">⚡</text>
+          <view class="mode-info">
+            <text class="mode-title">快速刷</text>
+            <text class="mode-desc">碎片时间，快速刷题</text>
+          </view>
+        </view>
+        <text class="mode-arrow">›</text>
+      </view>
+
+      <view class="mode-card" catchtap="onQuality" hover-class="card-hover" hover-stay-time="120">
+        <view class="mode-card-left">
+          <text class="mode-icon">🧠</text>
+          <view class="mode-info">
+            <text class="mode-title">质量刷</text>
+            <text class="mode-desc">整段时间，质量刷题</text>
+          </view>
+        </view>
+        <text class="mode-arrow">›</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- ===== 第二步：选科目 ===== -->
+  <block wx:else>
+    <view class="bank-header setup-header">
+      <view class="back-link" catchtap="onBackToMode" hover-class="back-link-hover" hover-stay-time="80">
+        <text class="back-link-icon">‹</text>
+        <text class="back-link-text">重选模式</text>
+      </view>
+      <view class="bank-badge">
+        <view class="bank-badge-glow"></view>
+        <text class="bank-icon">{{modeIcon}}</text>
+      </view>
+      <text class="bank-title">{{modeName}}</text>
+      <text class="bank-subtitle">选择岗位科目，开始你的面试之旅</text>
+    </view>
+
+    <view class="section">
+      <text class="section-label">岗位科目</text>
+      <view class="chip-list" wx:if="{{!loadingSubjects && subjects.length > 0}}">
+        <view wx:for="{{subjects}}"
+              wx:key="id"
+              class="chip {{selectedSubjectId === item.id ? 'chip-active' : ''}}"
+              data-id="{{item.id}}"
+              data-name="{{item.name}}"
+              hover-class="chip-hover"
+              hover-stay-time="80"
+              catchtap="onSelectSubject">
+          {{item.name}}
+        </view>
+      </view>
+      <view class="loading-hint" wx:elif="{{loadingSubjects}}">
+        <text>加载科目中…</text>
+      </view>
+    </view>
+
+    <view class="start-area">
+      <view class="selection-summary">
+        <text class="summary-label">当前选择</text>
+        <text class="summary-value">{{modeName}} · {{selectedSubjectName}}</text>
+      </view>
+      <view class="start-btn" catchtap="onStart" hover-class="btn-hover" hover-stay-time="100">
+        <text class="start-btn-icon">▶</text>
+        <text>开始刷题</text>
+      </view>
+    </view>
+  </block>
+
+</view>

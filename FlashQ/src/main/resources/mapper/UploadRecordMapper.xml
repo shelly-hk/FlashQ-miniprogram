@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.UploadRecordMapper">
+
+    <!-- 插入上传记录 -->
+    <insert id="insert" parameterType="com.flashq.entity.UploadRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO upload_record
+            (user_id, file_name, file_type, file_size, file_path, status, question_count, upload_date)
+        VALUES
+            (#{userId}, #{fileName}, #{fileType}, #{fileSize}, #{filePath}, #{status}, #{questionCount}, #{uploadDate})
+    </insert>
+
+    <!-- 按ID查询 -->
+    <select id="findById" parameterType="int" resultType="com.flashq.entity.UploadRecord">
+        SELECT * FROM upload_record WHERE id = #{id}
+    </select>
+
+    <!-- 更新状态与题目数 -->
+    <update id="updateStatus" parameterType="com.flashq.entity.UploadRecord">
+        UPDATE upload_record
+        SET status = #{status},
+            question_count = #{questionCount},
+            fail_reason = #{failReason}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 统计某用户某天的上传次数 -->
+    <select id="countTodayByUserId" resultType="int">
+        SELECT COUNT(*) FROM upload_record
+        WHERE user_id = #{userId} AND upload_date = #{uploadDate}
+    </select>
+
+    <!-- 分页查询用户上传记录 -->
+    <select id="findByUserId" resultType="com.flashq.entity.UploadRecord">
+        SELECT * FROM upload_record
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计用户上传记录总数 -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM upload_record WHERE user_id = #{userId}
+    </select>
+
+</mapper>

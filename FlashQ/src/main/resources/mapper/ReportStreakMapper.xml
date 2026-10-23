@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.ReportStreakMapper">
+
+    <resultMap id="streakMap" type="com.flashq.entity.ReportStreak">
+        <result property="userId" column="user_id"/>
+        <result property="streakCurrent" column="streak_current"/>
+        <result property="streakLongest" column="streak_longest"/>
+        <result property="lastActiveDate" column="last_active_date"/>
+        <result property="totalDays" column="total_days"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 按用户加行锁查询（连续打卡更新在事务内完成） -->
+    <select id="selectForUpdate" resultMap="streakMap">
+        SELECT * FROM report_streak
+        WHERE user_id = #{userId}
+        FOR UPDATE
+    </select>
+
+    <!-- 写入连续打卡状态（Java 侧完成计算，此处幂等 UPSERT） -->
+    <insert id="upsert" parameterType="com.flashq.entity.ReportStreak">
+        INSERT INTO report_streak (user_id, streak_current, streak_longest, last_active_date, total_days)
+        VALUES (#{userId}, #{streakCurrent}, #{streakLongest}, #{lastActiveDate}, #{totalDays})
+        ON DUPLICATE KEY UPDATE
+            streak_current   = VALUES(streak_current),
+            streak_longest   = VALUES(streak_longest),
+            last_active_date = VALUES(last_active_date),
+            total_days       = VALUES(total_days)
+    </insert>
+
+    <delete id="deleteByUserId">
+        DELETE FROM report_streak WHERE user_id = #{userId}
+    </delete>
+
+</mapper>

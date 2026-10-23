@@ -1,0 +1,81 @@
+<!--
+  关于页面
+  --------------------------------------------------
+  布局：应用图标名称 → 团队信息 → 备案信息 → 免责声明
+-->
+
+<view class="about-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ========== 应用信息 ========== -->
+  <view class="app-info">
+    <image class="app-logo-img" src="/assets/app-logo.jpg" mode="aspectFit"></image>
+    <view class="app-name">计算机一句话刷题助手</view>
+    <view class="app-version">版本 v1.3.1</view>
+  </view>
+
+  <!-- ========== 团队信息 ========== -->
+  <view class="section">
+    <view class="section-title">团队信息</view>
+    <view class="section-card">
+      <view class="info-row">
+        <text class="info-label">团队名称</text>
+        <text class="info-value">一句刷开发团队</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">团队简介</text>
+        <text class="info-value">致力于提供优质的在线刷题体验</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 联系我们 ========== -->
+  <view class="section contact-section">
+    <view class="section-title">联系我们</view>
+    <view class="section-card contact-card">
+      <view class="contact-icon">💬</view>
+      <view class="contact-body">
+        <view class="contact-name">官方 QQ 群</view>
+        <view class="contact-desc">加入群聊，反馈建议、交流刷题心得</view>
+        <view class="contact-qq-row" bindtap="onCopyQQ" hover-class="hover-row" hover-stay-time="100">
+          <text class="contact-qq">1130751121</text>
+          <text class="contact-copy-hint">点击复制</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 备案信息 ========== -->
+  <view class="section">
+    <view class="section-title">备案信息</view>
+    <view class="section-card">
+      <view class="info-row" bindtap="onBeianTap" hover-class="hover-row" hover-stay-time="100">
+        <text class="info-label">备案号</text>
+        <text class="info-value info-link">粤ICP备2026147363号-1X</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 免责声明 ========== -->
+  <view class="section" wx:if="{{configInfo && configInfo.disclaimer}}">
+    <view class="section-title">免责声明</view>
+    <view class="section-card">
+      <view class="disclaimer-text">{{configInfo.disclaimer}}</view>
+    </view>
+  </view>
+
+  <!-- ========== 法律协议 ========== -->
+  <view class="section">
+    <view class="section-title">法律协议</view>
+    <view class="section-card">
+      <view class="info-row" bindtap="onOpenUserAgreement" hover-class="hover-row" hover-stay-time="100">
+        <text class="info-label" style="width:auto;flex:1;">用户协议</text>
+        <text class="arrow">›</text>
+      </view>
+      <view class="info-row" bindtap="onOpenPrivacy" hover-class="hover-row" hover-stay-time="100">
+        <text class="info-label" style="width:auto;flex:1;">隐私政策</text>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+</view>

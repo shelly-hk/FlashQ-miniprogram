@@ -1,0 +1,476 @@
+<!--
+  我的页面
+  --------------------------------------------------
+  双层主题：浅色层 + 深色层（clip-path 圆形裁切）
+  主题切换从触摸点圆形扩散，与首页一致
+-->
+
+<!-- 滑动预览层（目标页面背景色） -->
+<view wx:if="{{swipePeekVisible}}" class="swipe-peek {{swipeAnimating ? 'swipe-peek-anim' : ''}}"
+  style="background:{{swipePeekColor}};transform:translateX({{swipePeekOffset}}px);"></view>
+
+<view class="mine-container {{swipeOffset ? 'swiping' : ''}} {{swipeAnimating ? 'swipe-animating' : ''}} font-{{fontScale}}"
+  style="transform: translateX({{swipeOffset}}px); background-color: {{darkMode ? '#1a1a1a' : ''}};"
+  bindtouchstart="onSwipeStart"
+  bindtouchmove="onSwipeMove"
+  bindtouchend="onSwipeEnd"
+  bindtouchcancel="onSwipeCancel">
+
+  <!-- ========== BGM 开关按钮（音符）—— 唱片本体，开启时自带旋转 ========== -->
+  <view class="bgm-toggle-btn {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <text class="bgm-toggle-icon">♪</text>
+  </view>
+
+  <!-- ========== 唱片杆（唱臂）：播放时落下搭在唱片上，停止时抬起 ========== -->
+  <view class="bgm-arm {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <view class="bgm-arm-weight"></view>
+    <view class="bgm-arm-rod"></view>
+    <view class="bgm-arm-head"></view>
+    <view class="bgm-arm-pivot"></view>
+  </view>
+
+  <!-- ========== 深色模式切换按钮（日/夜光晕锚点） ========== -->
+  <view class="theme-toggle-btn {{darkMode ? 'is-night' : ''}}" catchtap="onToggleTheme">
+    <text class="theme-icon">{{darkMode ? '🌙' : '☀️'}}</text>
+  </view>
+
+  <!-- ========== 常驻装饰层（云朵 + 星野，独立于浅/深切换层） ==========
+       关键架构改进：装饰元素不再放进 light-layer / dark-layer，
+       而是独立成一层永远常驻，z-index 在卡片之上但不挡点击。
+       这样切换深浅时装饰不会被 clip-path 重绘 → 不卡顿；
+       云朵动画状态连续不重置；颜色统一淡白，深浅通用。 -->
+  <view class="bg-ambient" aria-hidden="true">
+    <!-- 旋转描边光环（学首页 brand-mark-ring，transform:rotate 驱动） -->
+    <view class="amb-ring amb-ring-a"></view>
+    <!-- 浮动光斑（学首页 bg-spark，用文字字符 ✦，transform+opacity 驱动） -->
+    <text class="amb-spark amb-spark-1">✦</text>
+    <text class="amb-spark amb-spark-2">✦</text>
+    <text class="amb-spark amb-spark-4">✦</text>
+    <!-- 云朵：保留双侧 box-shadow 模拟云朵形状（静态属性，不在动画里） -->
+    <view class="amb-cloud amb-c1"></view>
+    <view class="amb-cloud amb-c2"></view>
+    <view class="amb-cloud amb-c3"></view>
+    <!-- 星点：✦ 四角星字符，opacity + scale 闪烁 -->
+    <text class="amb-star amb-s1">✦</text>
+    <text class="amb-star amb-s2">✦</text>
+    <text class="amb-star amb-s3">✦</text>
+    <text class="amb-star amb-s4">✦</text>
+    <text class="amb-star amb-s5">✦</text>
+    <text class="amb-star amb-s6">✦</text>
+  </view>
+
+  <!-- ========== 浅色层（底层，可交互） ==========
+       照抄首页机制：浅色层永远不挂 dark 类 → 永远继承 .mine-page 的日间变量
+       （--color-card/--color-text 等恒浅）。夜间变量定义在 .mine-page.dark，
+       而只有深色层挂了 dark 类（class="mine-page dark ... dark-layer"），
+       所以所有 .mine-page.dark .xxx 规则天然只作用于深色层 —— 浅色层卡片在扩散
+       圆扫到之前永远是浅色，扩散扫到哪、深色层覆盖到哪、才变深。
+       根容器 .mine-container 不挂 dark，弹窗用自身类（lc-sheet-dark 等）切换，
+       均不受此变更影响。 -->
+  <view class="mine-page theme-layer light-layer">
+
+    <!-- ========== 头部：用户信息 ========== -->
+    <view class="header">
+      <!-- 已登录 -->
+      <block wx:if="{{isLogin}}">
+        <view class="avatar-wrapper" catchtap="onAvatarTap" hover-class="hover-avatar" hover-stay-time="100">
+          <image wx:if="{{userInfo.avatar}}" class="avatar-img" src="{{userInfo.avatar}}" mode="aspectFill" />
+          <view wx:else class="avatar-default">🎓</view>
+          <view class="avatar-edit-badge">📷</view>
+        </view>
+        <view class="user-name" catchtap="onNicknameTap" hover-class="hover-text" hover-stay-time="100">{{userInfo.nickNo || '一句话用户'}}</view>
+      </block>
+
+      <!-- 未登录（游客） -->
+      <block wx:else>
+        <view class="avatar-default">👤</view>
+        <view class="user-name">游客模式</view>
+        <view class="login-btn {{logging ? 'logging' : ''}}" bindtap="onLoginTap" hover-class="hover-btn" hover-stay-time="100">
+          {{logging ? '登录中...' : '微信一键登录'}}
+        </view>
+      </block>
+    </view>
+
+    <!-- ========== 学习洞察仪表盘 ========== -->
+    <view wx:if="{{isLogin && dashboard}}" class="dashboard">
+
+      <!-- ① Hero 卡片：等级 + 连续天数 + 升级进度 -->
+      <view class="hero-card">
+        <view class="hero-info">
+          <view class="level-row">
+            <view class="level-badge" bindtap="onLevelTap" hover-class="level-badge-hover" hover-stay-time="80" style="background: linear-gradient(135deg, {{dashboard.level.color}}33, {{dashboard.level.color}}1a);">
+              <text class="level-icon">{{dashboard.level.icon}}</text>
+              <text class="level-name">{{dashboard.level.name}}</text>
+              <text class="level-badge-arrow">›</text>
+            </view>
+            <view class="streak-chip">
+              <text class="streak-icon">🔥</text>
+              <text class="streak-num">{{dashboard.streak}}</text>
+              <text class="streak-unit">天</text>
+            </view>
+          </view>
+
+          <view class="level-bar">
+            <view class="level-bar-fill" style="width: {{dashboard.lvProg.pct}}%; background: linear-gradient(90deg, {{dashboard.level.color}}, var(--color-primary));"></view>
+          </view>
+          <view class="level-meta">
+            <text wx:if="{{dashboard.lvProg.next}}" class="level-meta-text">再练 <text class="level-meta-strong">{{dashboard.lvProg.remain}}</text> 题升级</text>
+            <text wx:else class="level-meta-text">已达 <text class="level-meta-strong">最高等级</text></text>
+          </view>
+        </view>
+      </view>
+
+      <!-- ② KPI 四宫格 -->
+      <view class="kpi-grid">
+        <view class="kpi-cell">
+          <view class="kpi-num">{{dashboard.totalCount}}</view>
+          <view class="kpi-label">累计题数</view>
+        </view>
+        <view class="kpi-cell kpi-today">
+          <view class="kpi-num">{{dashboard.todayCount}}</view>
+          <view class="kpi-label">今日</view>
+          <view wx:if="{{dashboard.isRecord}}" class="kpi-tag kpi-tag-record">破纪录</view>
+          <view wx:elif="{{dashboard.todayVsAvg >= 1}}" class="kpi-tag kpi-tag-good">×{{dashboard.todayVsAvg}}</view>
+        </view>
+        <view class="kpi-cell">
+          <view class="kpi-num">#{{dashboard.rank}}</view>
+          <view class="kpi-label">总排名</view>
+          <view wx:if="{{dashboard.rankBeat}}" class="kpi-tag kpi-tag-beat">击败{{dashboard.rankBeat}}%</view>
+        </view>
+        <view class="kpi-cell">
+          <view class="kpi-num">#{{dashboard.todayRank}}</view>
+          <view class="kpi-label">今日榜</view>
+          <view wx:if="{{dashboard.rankTrend === 'up'}}" class="kpi-tag kpi-tag-up">↑{{dashboard.rankDelta}}</view>
+          <view wx:elif="{{dashboard.rankTrend === 'down'}}" class="kpi-tag kpi-tag-down">↓{{dashboard.rankDelta}}</view>
+        </view>
+      </view>
+
+    </view>
+
+    <!-- ========== 功能入口卡片 ========== -->
+    <view wx:if="{{isLogin && userInfo}}" class="action-cards">
+      <view class="action-card wrong-card" data-type="wrong" bindtap="onMenuTap" hover-class="hover-card" hover-stay-time="100">
+        <view class="action-icon wrong-icon">📝</view>
+        <view class="action-info">
+          <text class="action-num">{{userInfo.wrongTotal || 0}}</text>
+          <text class="action-label">错题本</text>
+        </view>
+      </view>
+      <view class="action-card favorite-card" data-type="favorite" bindtap="onMenuTap" hover-class="hover-card" hover-stay-time="100">
+        <view class="action-icon favorite-icon">⭐</view>
+        <view class="action-info">
+          <text class="action-num">{{userInfo.favoriteTotal || 0}}</text>
+          <text class="action-label">收藏</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ========== 菜单列表 ========== -->
+    <view class="menu-list">
+      <view class="menu-item" bindtap="onReportTap" hover-class="hover-row" hover-stay-time="100">
+        <text class="menu-icon menu-icon-report">📊</text>
+        <text class="menu-text">学习报告</text>
+        <view class="menu-badge" wx:if="{{dashboard && dashboard.streak >= 1}}">🔥 {{dashboard.streak}}</view>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="onSettingsTap" hover-class="hover-row" hover-stay-time="100">
+        <text class="menu-icon">⚙️</text>
+        <text class="menu-text">设置</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- ========== 退出登录 ========== -->
+    <view wx:if="{{isLogin}}" class="logout-btn" bindtap="onLogoutTap" hover-class="hover-row" hover-stay-time="100">
+      退出登录
+    </view>
+
+  </view>
+
+  <!-- ========== 深色层（顶层，圆形裁切，纯视觉） ==========
+       照抄首页：dark-layer 常驻 DOM 且常年占位，仅由 clip-path 控制显隐
+       （浅色态 = circle(0px) 完全裁掉，深色态 = circle(3000px) 全覆盖）。
+       不再用 visibility 隐藏，避免"隐藏层未绘制 → 切回时首帧渲染"造成闪屏。 -->
+  <view class="mine-page dark theme-layer dark-layer {{clipNoTransition ? 'no-transition' : ''}} {{themeAnimating ? 'theme-animating' : ''}}"
+        style="clip-path: {{darkClipPath}}; -webkit-clip-path: {{darkClipPath}};">
+
+    <!-- ========== 头部 ========== -->
+    <view class="header">
+      <block wx:if="{{isLogin}}">
+        <view class="avatar-wrapper">
+          <image wx:if="{{userInfo.avatar}}" class="avatar-img" src="{{userInfo.avatar}}" mode="aspectFill" />
+          <view wx:else class="avatar-default">🎓</view>
+          <view class="avatar-edit-badge">📷</view>
+        </view>
+        <view class="user-name">{{userInfo.nickNo || '一句话用户'}}</view>
+      </block>
+      <block wx:else>
+        <view class="avatar-default">👤</view>
+        <view class="user-name">游客模式</view>
+        <view class="login-btn {{logging ? 'logging' : ''}}">
+          {{logging ? '登录中...' : '微信一键登录'}}
+        </view>
+      </block>
+    </view>
+
+    <!-- ========== 学习洞察仪表盘 ========== -->
+    <view wx:if="{{isLogin && dashboard}}" class="dashboard">
+
+      <!-- ① Hero 卡片 -->
+      <view class="hero-card">
+        <view class="hero-info">
+          <view class="level-row">
+            <view class="level-badge" bindtap="onLevelTap" hover-class="level-badge-hover" hover-stay-time="80" style="background: linear-gradient(135deg, {{dashboard.level.color}}33, {{dashboard.level.color}}1a);">
+              <text class="level-icon">{{dashboard.level.icon}}</text>
+              <text class="level-name">{{dashboard.level.name}}</text>
+              <text class="level-badge-arrow">›</text>
+            </view>
+            <view class="streak-chip">
+              <text class="streak-icon">🔥</text>
+              <text class="streak-num">{{dashboard.streak}}</text>
+              <text class="streak-unit">天</text>
+            </view>
+          </view>
+
+          <view class="level-bar">
+            <view class="level-bar-fill" style="width: {{dashboard.lvProg.pct}}%; background: linear-gradient(90deg, {{dashboard.level.color}}, var(--color-primary));"></view>
+          </view>
+          <view class="level-meta">
+            <text wx:if="{{dashboard.lvProg.next}}" class="level-meta-text">再练 <text class="level-meta-strong">{{dashboard.lvProg.remain}}</text> 题升级</text>
+            <text wx:else class="level-meta-text">已达 <text class="level-meta-strong">最高等级</text></text>
+          </view>
+        </view>
+      </view>
+
+      <!-- ② KPI 四宫格 -->
+      <view class="kpi-grid">
+        <view class="kpi-cell">
+          <view class="kpi-num">{{dashboard.totalCount}}</view>
+          <view class="kpi-label">累计题数</view>
+        </view>
+        <view class="kpi-cell kpi-today">
+          <view class="kpi-num">{{dashboard.todayCount}}</view>
+          <view class="kpi-label">今日</view>
+          <view wx:if="{{dashboard.isRecord}}" class="kpi-tag kpi-tag-record">破纪录</view>
+          <view wx:elif="{{dashboard.todayVsAvg >= 1}}" class="kpi-tag kpi-tag-good">×{{dashboard.todayVsAvg}}</view>
+        </view>
+        <view class="kpi-cell">
+          <view class="kpi-num">#{{dashboard.rank}}</view>
+          <view class="kpi-label">总排名</view>
+          <view wx:if="{{dashboard.rankBeat}}" class="kpi-tag kpi-tag-beat">击败{{dashboard.rankBeat}}%</view>
+        </view>
+        <view class="kpi-cell">
+          <view class="kpi-num">#{{dashboard.todayRank}}</view>
+          <view class="kpi-label">今日榜</view>
+          <view wx:if="{{dashboard.rankTrend === 'up'}}" class="kpi-tag kpi-tag-up">↑{{dashboard.rankDelta}}</view>
+          <view wx:elif="{{dashboard.rankTrend === 'down'}}" class="kpi-tag kpi-tag-down">↓{{dashboard.rankDelta}}</view>
+        </view>
+      </view>
+
+    </view>
+
+    <!-- ========== 功能入口卡片 ========== -->
+    <view wx:if="{{isLogin && userInfo}}" class="action-cards">
+      <view class="action-card wrong-card">
+        <view class="action-icon wrong-icon">📝</view>
+        <view class="action-info">
+          <text class="action-num">{{userInfo.wrongTotal || 0}}</text>
+          <text class="action-label">错题本</text>
+        </view>
+      </view>
+      <view class="action-card favorite-card">
+        <view class="action-icon favorite-icon">⭐</view>
+        <view class="action-info">
+          <text class="action-num">{{userInfo.favoriteTotal || 0}}</text>
+          <text class="action-label">收藏</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ========== 菜单列表 ========== -->
+    <view class="menu-list">
+      <view class="menu-item {{pressedKey === 'report' ? 'hover-row' : ''}}">
+        <text class="menu-icon menu-icon-report">📊</text>
+        <text class="menu-text">学习报告</text>
+        <view class="menu-badge" wx:if="{{dashboard && dashboard.streak >= 1}}">🔥 {{dashboard.streak}}</view>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item {{pressedKey === 'settings' ? 'hover-row' : ''}}">
+        <text class="menu-icon">⚙️</text>
+        <text class="menu-text">设置</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- ========== 退出登录 ========== -->
+    <view wx:if="{{isLogin}}" class="logout-btn {{pressedKey === 'logout' ? 'hover-row' : ''}}">
+      退出登录
+    </view>
+
+  </view>
+
+  <!-- ========== 升级路线弹窗 ========== -->
+  <view wx:if="{{levelModalVisible}}" class="lv-mask" bindtap="closeLevelModal">
+    <view class="lv-sheet {{darkMode ? 'lv-sheet-dark' : ''}}" catchtap="noop">
+
+      <!-- 顶部：标题 + 当前等级概览 + 关闭按钮 -->
+      <view class="lv-header">
+        <view class="lv-title-row">
+          <view class="lv-title">
+            <text class="lv-title-icon">{{dashboard.level.icon}}</text>
+            <text>升级路线</text>
+          </view>
+          <view class="lv-close" catchtap="closeLevelModal" hover-class="lv-close-hover" hover-stay-time="100">
+            <text>×</text>
+          </view>
+        </view>
+        <view class="lv-current">
+          <view class="lv-current-num">{{dashboard.totalCount}}</view>
+          <view class="lv-current-label">
+            <text class="lv-current-lv">{{dashboard.level.name}}</text>
+            <text class="lv-current-next" wx:if="{{dashboard.lvProg.next}}">再练 {{dashboard.lvProg.remain}} 题到下一级</text>
+            <text class="lv-current-next" wx:else>已满级，封顶达成</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 路线列表 -->
+      <scroll-view class="lv-body" scroll-y="true" enhanced="{{true}}" show-scrollbar="{{false}}">
+        <view class="lv-list">
+          <view wx:for="{{dashboard.levelRoadmap}}" wx:key="idx"
+                class="lv-item lv-status-{{item.status}}">
+
+            <!-- 左侧：节点圆 + 连接线 -->
+            <view class="lv-node-col">
+              <view class="lv-node" style="{{item.status === 'current' ? 'background: linear-gradient(135deg, ' + item.color + ', ' + item.color + 'cc); border-color: ' + item.color + ';' : ''}}">
+                <text wx:if="{{item.status === 'passed'}}" class="lv-node-check">✓</text>
+                <text wx:else class="lv-node-icon">{{item.icon}}</text>
+              </view>
+              <view wx:if="{{index < dashboard.levelRoadmap.length - 1}}" class="lv-line lv-line-{{item.status}}"></view>
+            </view>
+
+            <!-- 右侧：等级信息 -->
+            <view class="lv-info">
+              <view class="lv-info-top">
+                <view class="lv-name-row">
+                  <text class="lv-name">{{item.name}}</text>
+                  <text wx:if="{{item.status === 'current'}}" class="lv-tag lv-tag-current">当前</text>
+                  <text wx:elif="{{item.status === 'locked'}}" class="lv-tag lv-tag-locked">未解锁</text>
+                  <text wx:else class="lv-tag lv-tag-passed">已达成</text>
+                </view>
+                <text class="lv-thresh">{{item.min}}+ 题</text>
+              </view>
+
+              <view wx:if="{{item.status === 'current'}}" class="lv-progress">
+                <view class="lv-progress-bar">
+                  <view class="lv-progress-fill" style="width: {{item.progress}}%; background: linear-gradient(90deg, {{item.color}}, {{item.color}}cc);"></view>
+                </view>
+                <text class="lv-progress-text">还需 {{item.remain}} 题</text>
+              </view>
+              <view wx:elif="{{item.status === 'locked'}}" class="lv-locked-tip">
+                还需 <text class="lv-locked-strong">{{item.remain}}</text> 题解锁
+              </view>
+              <view wx:else class="lv-passed-tip">已达成</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <!-- 底部鼓励文案 -->
+      <view class="lv-footer">
+        <text>每答一题都在累计，坚持就有进步</text>
+      </view>
+
+    </view>
+  </view>
+
+  <!-- ========== 登录协议确认弹窗 ========== -->
+  <view wx:if="{{loginConsentVisible}}" class="lc-mask" bindtap="onCloseLoginConsent">
+    <view class="lc-sheet {{darkMode ? 'lc-sheet-dark' : ''}}" catchtap="noop">
+
+      <!-- 顶部：标题 + 关闭按钮 -->
+      <view class="lc-header">
+        <view class="lc-title">
+          <text class="lc-title-icon">👋</text>
+          <text>欢迎回来</text>
+        </view>
+        <view class="lc-close" catchtap="onCloseLoginConsent" hover-class="lc-close-hover" hover-stay-time="100">
+          <text>×</text>
+        </view>
+      </view>
+
+      <!-- 正文：说明 + 协议提示（书名号协议可点击跳转） -->
+      <view class="lc-body">
+        <view class="lc-desc">登录后将为你同步答题记录、连续打卡和学习统计，换设备学习也不丢数据。</view>
+        <view class="lc-terms">
+          登录即表示你已阅读并同意
+          <text class="lc-link" data-type="user" catchtap="onLoginConsentAgreement">《用户协议》</text>
+          和
+          <text class="lc-link" data-type="privacy" catchtap="onLoginConsentAgreement">《隐私政策》</text>
+        </view>
+      </view>
+
+      <!-- 底部：取消 / 同意并登录 -->
+      <view class="lc-footer">
+        <view class="lc-btn lc-btn-ghost" catchtap="onCloseLoginConsent" hover-class="lc-btn-ghost-hover" hover-stay-time="100">暂不登录</view>
+        <view class="lc-btn lc-btn-primary {{logging ? 'lc-btn-loading' : ''}}" catchtap="onAgreeAndLogin" hover-class="lc-btn-primary-hover" hover-stay-time="100">{{logging ? '登录中...' : '同意并登录'}}</view>
+      </view>
+
+    </view>
+  </view>
+
+  <!-- ========== 头像选择底部弹窗 ========== -->
+  <view wx:if="{{showAvatarSheet}}" class="sheet-mask" bindtap="closeAvatarSheet">
+    <view class="sheet-content" catchtap="noop">
+      <view class="sheet-item sheet-item-wx">
+        <!-- 微信头像：必须用 button open-type="chooseAvatar" -->
+        <button class="wx-avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+          <text class="sheet-item-icon">💚</text>
+          <text class="sheet-item-text">使用微信头像</text>
+        </button>
+      </view>
+      <view class="sheet-item" bindtap="chooseFromAlbum" hover-class="hover-sheet" hover-stay-time="100">
+        <text class="sheet-item-icon">🖼️</text>
+        <text class="sheet-item-text">从相册选择</text>
+      </view>
+      <view class="sheet-item" bindtap="chooseFromCamera" hover-class="hover-sheet" hover-stay-time="100">
+        <text class="sheet-item-icon">📸</text>
+        <text class="sheet-item-text">拍照</text>
+      </view>
+      <view class="sheet-cancel" bindtap="closeAvatarSheet" hover-class="hover-sheet" hover-stay-time="100">
+        取消
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 昵称编辑弹窗 ========== -->
+  <view wx:if="{{showNicknameModal}}" class="modal-mask" bindtap="closeNicknameModal">
+    <view class="modal-content" catchtap="noop">
+      <view class="modal-title">修改昵称</view>
+      <input class="nickname-input" type="nickname" maxlength="8"
+        placeholder="请输入昵称（最多8个字）"
+        value="{{tempNickName}}"
+        bindinput="onNicknameInput"
+        bindblur="onNicknameBlur" />
+      <view class="modal-buttons">
+        <view class="btn-cancel" bindtap="closeNicknameModal" hover-class="hover-btn" hover-stay-time="100">取消</view>
+        <view class="btn-save" bindtap="saveNickname" hover-class="hover-btn" hover-stay-time="100">保存</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 隐私授权弹窗 ========== -->
+  <view wx:if="{{showPrivacy}}" class="privacy-mask">
+    <view class="privacy-card">
+      <view class="privacy-title">隐私保护提示</view>
+      <view class="privacy-desc">
+        在使用「一句刷」前，请仔细阅读<text class="privacy-link" bindtap="onOpenPrivacyContract">《用户隐私保护指引》</text>。我们将依法收集和使用您的个人信息，保障您的合法权益。
+      </view>
+      <view class="privacy-buttons">
+        <view class="privacy-btn-disagree" bindtap="handleDisagreePrivacy">拒绝</view>
+        <button id="agree-btn" class="privacy-btn-agree" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="handleAgreePrivacy">同意并继续</button>
+      </view>
+    </view>
+  </view>
+
+</view>

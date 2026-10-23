@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.QuestionMapper">
+
+    <!--
+      随机取一题，可按科目、难度、题目类型(it/code/interview)和风格(quick/quality)筛选
+      兼容旧版：quizType 未传时返回全部题目，仅排除 code/interview 新题型，
+      保持原有"返回所有 IT 及历史题目"的行为不变（含 quiz_type 为 NULL 的自定义题目）。
+    -->
+    <select id="selectRandom" resultType="com.flashq.entity.Question">
+        SELECT * FROM question
+        WHERE is_deleted = 0
+        <if test="subjectId != null and subjectId > 0">
+            AND subject_id = #{subjectId}
+        </if>
+        <if test="difficulty != null and difficulty > 0">
+            AND difficulty = #{difficulty}
+        </if>
+        <choose>
+            <!-- 显式指定题目类型（it/code/interview）才精确过滤 -->
+            <when test="quizType != null and quizType != ''">
+                AND quiz_type = #{quizType}
+            </when>
+            <!-- 未指定时：返回全部题目，仅排除新增的 code/interview 题，避免污染随机题库 -->
+            <otherwise>
+                AND (quiz_type IS NULL OR (quiz_type != 'code' AND quiz_type != 'interview'))
+            </otherwise>
+        </choose>
+        <if test="style != null and style != ''">
+            AND style = #{style}
+        </if>
+        ORDER BY RAND()
+            LIMIT 1
+    </select>
+
+    <!-- 按ID查询题目 -->
+    <select id="findById" parameterType="int" resultType="com.flashq.entity.Question">
+        SELECT * FROM question
+        WHERE id = #{id}
+          AND is_deleted = 0
+    </select>
+
+
+</mapper>

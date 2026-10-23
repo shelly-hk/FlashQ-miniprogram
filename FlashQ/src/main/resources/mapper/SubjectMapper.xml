@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.SubjectMapper">
+    <!--  查询所有科目列表  -->
+    <select id="findAll" resultType="com.flashq.entity.Subject"> SELECT * FROM subject ORDER BY id </select>
+
+    <!--
+      按题目类型查询科目列表：
+        quizType='code'      → 只返回代码题库科目（quiz_type='code'）
+        quizType='interview' → 只返回面试题库科目（quiz_type='interview'）
+        其他（null/空/it）   → 返回随机刷题科目：全部科目中排除 code/interview
+                              （quiz_type 为 NULL 或 '选择题' 等历史科目均保留，不影响旧数据）
+    -->
+    <select id="findByQuizType" resultType="com.flashq.entity.Subject">
+        SELECT * FROM subject
+        <where>
+            <choose>
+                <when test="quizType == 'code' or quizType == 'interview'">
+                    quiz_type = #{quizType}
+                </when>
+                <otherwise>
+                    (quiz_type IS NULL OR (quiz_type != 'code' AND quiz_type != 'interview'))
+                </otherwise>
+            </choose>
+        </where>
+        ORDER BY id
+    </select>
+
+    <!--  按ID查科目  -->
+    <select id="findById" parameterType="int" resultType="com.flashq.entity.Subject"> SELECT * FROM subject WHERE id = #{id} </select>
+</mapper>

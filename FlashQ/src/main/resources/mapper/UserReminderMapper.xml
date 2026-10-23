@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.UserReminderMapper">
+
+    <!-- 根据用户ID查询提醒记录 -->
+    <select id="findByUserId" resultType="com.flashq.entity.UserReminder">
+        SELECT * FROM user_reminder
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 插入新记录（首次开启提醒时） -->
+    <insert id="insert" parameterType="com.flashq.entity.UserReminder" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_reminder
+            (user_id, openid, enabled, remain_count, total_auth_count, total_sent_count,
+             remind_hour, remind_minute)
+        VALUES
+            (#{userId}, #{openid}, #{enabled}, #{remainCount}, #{totalAuthCount}, #{totalSentCount},
+             #{remindHour}, #{remindMinute})
+    </insert>
+
+    <!-- 开启/关闭提醒 -->
+    <update id="updateEnabled">
+        UPDATE user_reminder
+        SET enabled = #{enabled},
+            update_time = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 用户授权上报：remain_count 累加，total_auth_count 累加 -->
+    <update id="addRemainCount">
+        UPDATE user_reminder
+        SET remain_count     = remain_count + #{count},
+            total_auth_count = total_auth_count + #{count},
+            update_time      = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 修改提醒时间 -->
+    <update id="updateRemindTime">
+        UPDATE user_reminder
+        SET remind_hour   = #{hour},
+            remind_minute = #{minute},
+            update_time   = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 下发成功后扣减：remain_count -1，total_sent_count +1，last_remind_date = today -->
+    <update id="markSent">
+        UPDATE user_reminder
+        SET remain_count      = remain_count - 1,
+            total_sent_count  = total_sent_count + 1,
+            last_remind_date  = #{today},
+            update_time       = NOW()
+        WHERE user_id = #{userId}
+          AND remain_count > 0
+    </update>
+
+    <!--
+        定时任务扫描：返回所有「需要现在下发提醒」的用户。
+        条件：
+          enabled = 1
+          AND remain_count > 0              还有授权额度
+          AND (last_remind_date IS NULL OR last_remind_date != today)   今天还没下发过
+          AND (remind_hour * 60 + remind_minute) BETWEEN fromMinute AND toMinute（左闭右开用 < 替代 BETWEEN 右端）
+        说明：调度器每分钟执行一次，fromMinute=当前分钟，toMinute=当前分钟+1，
+              每个用户每天最多触发一次，且只在「设置的那个分钟」触发。
+    -->
+    <select id="findUsersToRemind" resultType="com.flashq.entity.UserReminder">
+        SELECT * FROM user_reminder
+        WHERE enabled = 1
+          AND remain_count > 0
+          AND (last_remind_date IS NULL OR last_remind_date != #{today})
+          AND (remind_hour * 60 + remind_minute) >= #{fromMinute}
+          AND (remind_hour * 60 + remind_minute) &lt; #{toMinute}
+    </select>
+
+    <!-- 每天凌晨批量重置 last_remind_date 为 NULL -->
+    <update id="resetLastRemindDate">
+        UPDATE user_reminder
+        SET last_remind_date = NULL,
+            update_time      = NOW()
+        WHERE last_remind_date IS NOT NULL
+    </update>
+
+</mapper>

@@ -1,0 +1,94 @@
+/**
+ * 用户协议 / 隐私政策页面样式
+ */
+
+page {
+  background: #f5f7fa;
+}
+
+.agreement-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #F6F8FB 0%, #F5F7FA 45%, #F2F4F8 100%);
+  padding: 40rpx 32rpx 80rpx;
+}
+
+.agreement-page.dark {
+  background: linear-gradient(180deg, #1A2029 0%, #161b22 45%, #131820 100%);
+}
+
+/* ========== 标题 ========== */
+.agreement-title {
+  font-size: calc(42rpx * var(--font-scale, 1));
+  font-weight: 700;
+  color: #1a1a1a;
+  text-align: center;
+  margin-bottom: 16rpx;
+}
+
+.agreement-page.dark .agreement-title {
+  color: #e0e0e0;
+}
+
+.agreement-update {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: #999;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.agreement-page.dark .agreement-update {
+  color: #666;
+}
+
+/* ========== 章节 ========== */
+.agreement-section {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(25, 118, 210, 0.05);
+  border: 1rpx solid #E8EDF2;
+}
+
+.agreement-page.dark .agreement-section {
+  background: #242a35;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+  border-color: #2E3642;
+}
+
+.agreement-h2 {
+  font-size: calc(32rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 20rpx;
+  padding-left: 16rpx;
+  border-left: 6rpx solid var(--color-primary, #1989fa);
+  line-height: 1.2;
+}
+
+.agreement-page.dark .agreement-h2 {
+  color: #e0e0e0;
+}
+
+.agreement-p {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: #555;
+  line-height: 1.85;
+  margin-bottom: 12rpx;
+}
+
+.agreement-page.dark .agreement-p {
+  color: #aaa;
+}
+
+/* ========== 底部 ========== */
+.agreement-footer {
+  text-align: center;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: #999;
+  padding: 24rpx 0;
+}
+
+.agreement-page.dark .agreement-footer {
+  color: #666;
+}

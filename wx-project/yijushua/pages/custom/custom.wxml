@@ -1,0 +1,390 @@
+<!--
+  自主题库刷题页
+  --------------------------------------------------
+  双层主题：浅色层 + 深色层（clip-path 圆形裁切）
+  主题切换从触摸点圆形扩散，与首页/刷题页一致
+-->
+
+<!-- WXS 工具函数：支持多选题正确答案高亮 + 多选选中判断 -->
+<wxs module="qz">
+module.exports = {
+  isCorrectOpt: function(letter, correctAnswer) {
+    if (!correctAnswer) return false;
+    return correctAnswer.indexOf(letter) > -1;
+  },
+  isInArr: function(letter, arr) {
+    if (!arr || arr.length === 0) return false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] === letter) return true;
+    }
+    return false;
+  }
+};
+</wxs>
+
+<view class="custom-container" style="background-color: {{darkMode ? '#1a1a1a' : ''}};">
+
+  <!-- ========== BGM 开关按钮（音符）—— 唱片本体，开启时自带旋转 ========== -->
+  <view class="bgm-toggle-btn {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <text class="bgm-toggle-icon">♪</text>
+  </view>
+
+  <!-- ========== 唱片杆（唱臂）：播放时落下搭在唱片上，停止时抬起 ========== -->
+  <view class="bgm-arm {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <view class="bgm-arm-weight"></view>
+    <view class="bgm-arm-rod"></view>
+    <view class="bgm-arm-head"></view>
+    <view class="bgm-arm-pivot"></view>
+  </view>
+
+  <!-- ========== 深色模式切换按钮 ========== -->
+  <view class="theme-toggle-btn" catchtap="onToggleTheme">
+    <text class="theme-icon">{{darkMode ? '🌙' : '☀️'}}</text>
+  </view>
+
+  <!-- ========== 浅色层（底层，可交互） ==========
+       照抄首页机制：浅色层永远不挂 dark 类 → 永远继承 .custom-page 的日间变量
+       （--color-card/--color-text 等恒浅）。夜间变量定义在 .custom-page.dark，
+       而只有深色层挂了 dark 类（class="custom-page dark ... dark-layer"），
+       所以所有 .custom-page.dark .xxx 规则天然只作用于深色层 —— 浅色层卡片在扩散
+       圆扫到之前永远是浅色，扩散扫到哪、深色层覆盖到哪、才变深。 -->
+  <view class="custom-page theme-layer light-layer">
+
+    <!-- ========== 分类筛选条 ========== -->
+    <view class="filter-bar" bindtap="onToggleCategoryPanel" hover-class="hover-row" hover-stay-time="100">
+      <text class="filter-label">{{selectedCategoryName}}</text>
+      <text class="filter-arrow {{showCategoryPanel ? 'arrow-up' : ''}}">›</text>
+    </view>
+
+    <!-- ========== 自主题库进度条 ========== -->
+    <view wx:if="{{customTotalNum > 0}}" class="custom-progress">
+      <view class="progress-meta">第 <text class="progress-current">{{customCurrentNum}}</text> 题 / 共 {{customTotalNum}} 题</view>
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{customTotalNum ? (customCurrentNum * 100 / customTotalNum) : 0}}%;"></view>
+      </view>
+    </view>
+
+    <!-- 分类筛选面板 -->
+    <view wx:if="{{showCategoryPanel}}" class="filter-panel">
+      <view class="filter-pill {{selectedCategoryId === 0 ? 'pill-active' : ''}}"
+            data-id="{{0}}" data-name="全部" bindtap="onSelectCategory"
+            hover-class="hover-pill" hover-stay-time="100">全部</view>
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        class="filter-pill {{selectedCategoryId === item.id ? 'pill-active' : ''}}"
+        data-id="{{item.id}}" data-name="{{item.name}}"
+        bindtap="onSelectCategory"
+        hover-class="hover-pill" hover-stay-time="100"
+      >{{item.name}}</view>
+    </view>
+
+    <!-- ========== 统计条 ========== -->
+    <view class="stats-bar">
+      <view class="stat-item">
+        <text class="stat-num">{{totalCount}}</text>
+        <text class="stat-label">累计刷题</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{todayCount}}</text>
+        <text class="stat-label">今日刷题</text>
+      </view>
+    </view>
+
+    <!-- ========== 空状态 ========== -->
+    <view wx:if="{{!question && !loading && loadError}}" class="empty-state">
+      <view class="empty-icon">📡</view>
+      <text class="empty-text">加载失败</text>
+      <text class="empty-hint">网络异常，请重试</text>
+      <view class="empty-btn" bindtap="onRetryLoad" hover-class="hover-btn" hover-stay-time="100">
+        重新加载
+      </view>
+    </view>
+    <view wx:if="{{!question && !loading && !loadError}}" class="empty-state">
+      <view class="empty-icon">📝</view>
+      <text class="empty-text">自主题库还是空的</text>
+      <text class="empty-hint">上传文件或导入题目，开始自主题库刷题</text>
+      <view class="empty-btn" bindtap="onGoUpload" hover-class="hover-btn" hover-stay-time="100">
+        去上传
+      </view>
+    </view>
+
+    <!-- ========== 加载状态 ========== -->
+    <view wx:if="{{loading}}" class="loading-state">
+      <view class="loading-dots">
+        <view class="dot"></view>
+        <view class="dot"></view>
+        <view class="dot"></view>
+      </view>
+      <text class="loading-text">正在取题...</text>
+    </view>
+
+    <!-- ========== 题目区域 ========== -->
+    <view wx:if="{{question && !loading}}" class="question-card">
+
+      <!-- 来源标签 + 分类标签 + 多选标识 -->
+      <view class="source-row">
+        <view class="source-tag">
+          <text class="source-icon">📄</text>
+          <text class="source-name">{{question.sourceFileName}}</text>
+        </view>
+        <view wx:if="{{question.categoryName}}" class="category-tag">
+          {{question.categoryName}}
+        </view>
+        <view wx:if="{{isMultiChoice}}" class="multi-tag">多选题</view>
+      </view>
+
+      <!-- 题干 -->
+      <view class="question-content">{{question.content}}</view>
+
+      <!-- 选项 -->
+      <view class="options">
+        <view
+          wx:for="{{options}}"
+          wx:key="letter"
+          class="option {{
+            judged && qz.isCorrectOpt(item.letter, correctAnswer) ? 'opt-correct' : ''
+          }} {{
+            judged && !isCorrect && (
+              isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : (selectedOption === item.letter)
+            ) ? 'opt-wrong' : ''
+          }} {{
+            !judged && (isMultiChoice ? qz.isInArr(item.letter, selectedOptions) : selectedOption === item.letter) ? 'opt-selected' : ''
+          }}"
+          data-letter="{{item.letter}}"
+          bindtap="onOptionTap"
+          hover-class="{{!judged ? 'hover-card' : ''}}"
+          hover-stay-time="100"
+        >
+          <text class="option-letter {{isMultiChoice ? 'checkbox-letter' : ''}}">{{isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !judged ? '✓' : item.letter) : item.letter}}</text>
+          <text class="option-text">{{item.text}}</text>
+          <text wx:if="{{judged && qz.isCorrectOpt(item.letter, correctAnswer)}}" class="option-badge badge-correct">正确</text>
+          <text wx:if="{{judged && !isCorrect && (isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : selectedOption === item.letter)}}" class="option-badge badge-wrong">你的选择</text>
+        </view>
+      </view>
+
+      <!-- 多选题确认提交按钮 -->
+      <view wx:if="{{isMultiChoice && !judged}}" class="multi-submit-bar">
+        <view class="multi-hint">已选 {{selectedOptions.length}} 项</view>
+        <view class="multi-submit-btn {{selectedOptions.length === 0 ? 'btn-disabled' : ''}}" bindtap="onSubmitMulti" hover-class="{{selectedOptions.length > 0 ? 'hover-btn' : ''}}" hover-stay-time="100">确认提交</view>
+      </view>
+
+      <!-- 反馈区 -->
+      <view wx:if="{{judged}}" class="feedback">
+        <view class="result-bar {{isCorrect ? 'result-correct' : 'result-wrong'}}">
+          <text wx:if="{{isCorrect}}">答对了！</text>
+          <text wx:else>答错了，正确答案是 {{correctAnswer}}</text>
+          <text wx:if="{{isCorrect && countdown > 0}}" class="countdown-tag">{{countdown}}秒后下一题</text>
+        </view>
+
+        <view wx:if="{{explanation}}" class="explanation-box">
+          <text class="explanation-label">解析</text>
+          <text class="explanation-text">{{explanation}}</text>
+        </view>
+
+      </view>
+
+      <!-- 底部操作区 -->
+      <view class="bottom-bar">
+        <view wx:if="{{hasHistory}}" class="prev-btn" bindtap="onPrevTap" hover-class="hover-btn" hover-stay-time="100">
+          上一题
+        </view>
+        <!-- 收藏按钮（答题前后均可点） -->
+        <view class="fav-btn {{isFavorited ? 'fav-active' : ''}}" catchtap="onToggleFavorite" hover-class="hover-btn" hover-stay-time="100">
+          {{isFavorited ? '★ 已收藏' : '☆ 收藏'}}
+        </view>
+        <view
+          wx:if="{{judged && (!isCorrect || !autoNext || fromHistory)}}"
+          class="next-btn"
+          bindtap="onNextTap"
+          hover-class="hover-btn"
+          hover-stay-time="100"
+        >
+          下一题
+        </view>
+        <view
+          wx:if="{{judged && isCorrect && autoNext && countdown > 0 && !fromHistory}}"
+          class="next-btn next-btn-skip"
+          bindtap="onNextTap"
+          hover-class="hover-btn"
+          hover-stay-time="100"
+        >
+          立即下一题
+        </view>
+      </view>
+
+    </view>
+
+  </view>
+
+  <!-- ========== 深色层（顶层，圆形裁切，纯视觉） ==========
+       用 wx:if 按需创建：节点要被实际绘制（哪怕被 circle(0) 裁空）才能作为
+       clip-path 过渡的插值起点；若改成常驻 + visibility:hidden，浏览器没有
+       "已渲染的上一帧"，circle(0)→circle(maxRadius) 的扩散动画就播不出来。
+       深色层 pointer-events:none，点击穿透到底层；z-index:2 在浅色层之上。
+       入场与切换的扩散动画在 onShow / onToggleTheme 中驱动。 -->
+  <view class="custom-page dark theme-layer dark-layer {{clipNoTransition ? 'no-transition' : ''}}"
+        wx:if="{{darkLayerVisible}}"
+        style="clip-path: {{darkClipPath}}; -webkit-clip-path: {{darkClipPath}};">
+
+    <!-- ========== 分类筛选条 ========== -->
+    <view class="filter-bar">
+      <text class="filter-label">{{selectedCategoryName}}</text>
+      <text class="filter-arrow {{showCategoryPanel ? 'arrow-up' : ''}}">›</text>
+    </view>
+
+    <!-- 自主题库进度条（深色层镜像） -->
+    <view wx:if="{{customTotalNum > 0}}" class="custom-progress">
+      <view class="progress-meta">第 <text class="progress-current">{{customCurrentNum}}</text> 题 / 共 {{customTotalNum}} 题</view>
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{customTotalNum ? (customCurrentNum * 100 / customTotalNum) : 0}}%;"></view>
+      </view>
+    </view>
+
+    <!-- 分类筛选面板 -->
+    <view wx:if="{{showCategoryPanel}}" class="filter-panel">
+      <view class="filter-pill {{selectedCategoryId === 0 ? 'pill-active' : ''}}">全部</view>
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        class="filter-pill {{selectedCategoryId === item.id ? 'pill-active' : ''}}"
+      >{{item.name}}</view>
+    </view>
+
+    <!-- ========== 统计条 ========== -->
+    <view class="stats-bar">
+      <view class="stat-item">
+        <text class="stat-num">{{totalCount}}</text>
+        <text class="stat-label">累计刷题</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{todayCount}}</text>
+        <text class="stat-label">今日刷题</text>
+      </view>
+    </view>
+
+    <!-- ========== 空状态 ========== -->
+    <view wx:if="{{!question && !loading && loadError}}" class="empty-state">
+      <view class="empty-icon">📡</view>
+      <text class="empty-text">加载失败</text>
+      <text class="empty-hint">网络异常，请重试</text>
+      <view class="empty-btn">重新加载</view>
+    </view>
+    <view wx:if="{{!question && !loading && !loadError}}" class="empty-state">
+      <view class="empty-icon">📝</view>
+      <text class="empty-text">自主题库还是空的</text>
+      <text class="empty-hint">上传文件或导入题目，开始自主题库刷题</text>
+      <view class="empty-btn">去上传</view>
+    </view>
+
+    <!-- ========== 加载状态 ========== -->
+    <view wx:if="{{loading}}" class="loading-state">
+      <view class="loading-dots">
+        <view class="dot"></view>
+        <view class="dot"></view>
+        <view class="dot"></view>
+      </view>
+      <text class="loading-text">正在取题...</text>
+    </view>
+
+    <!-- ========== 题目区域 ========== -->
+    <view wx:if="{{question && !loading}}" class="question-card">
+
+      <view class="source-row">
+        <view class="source-tag">
+          <text class="source-icon">📄</text>
+          <text class="source-name">{{question.sourceFileName}}</text>
+        </view>
+        <view wx:if="{{question.categoryName}}" class="category-tag">
+          {{question.categoryName}}
+        </view>
+        <view wx:if="{{isMultiChoice}}" class="multi-tag">多选题</view>
+      </view>
+
+      <view class="question-content">{{question.content}}</view>
+
+      <view class="options">
+        <view
+          wx:for="{{options}}"
+          wx:key="letter"
+          class="option {{
+            judged && qz.isCorrectOpt(item.letter, correctAnswer) ? 'opt-correct' : ''
+          }} {{
+            judged && !isCorrect && (
+              isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : (selectedOption === item.letter)
+            ) ? 'opt-wrong' : ''
+          }} {{
+            !judged && (isMultiChoice ? qz.isInArr(item.letter, selectedOptions) : selectedOption === item.letter) ? 'opt-selected' : ''
+          }}"
+        >
+          <text class="option-letter {{isMultiChoice ? 'checkbox-letter' : ''}}">{{isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !judged ? '✓' : item.letter) : item.letter}}</text>
+          <text class="option-text">{{item.text}}</text>
+          <text wx:if="{{judged && qz.isCorrectOpt(item.letter, correctAnswer)}}" class="option-badge badge-correct">正确</text>
+          <text wx:if="{{judged && !isCorrect && (isMultiChoice ? (qz.isInArr(item.letter, selectedOptions) && !qz.isCorrectOpt(item.letter, correctAnswer)) : selectedOption === item.letter)}}" class="option-badge badge-wrong">你的选择</text>
+        </view>
+      </view>
+
+      <!-- 多选题确认提交按钮 -->
+      <view wx:if="{{isMultiChoice && !judged}}" class="multi-submit-bar">
+        <view class="multi-hint">已选 {{selectedOptions.length}} 项</view>
+        <view class="multi-submit-btn {{selectedOptions.length === 0 ? 'btn-disabled' : ''}}">确认提交</view>
+      </view>
+
+      <view wx:if="{{judged}}" class="feedback">
+        <view class="result-bar {{isCorrect ? 'result-correct' : 'result-wrong'}}">
+          <text wx:if="{{isCorrect}}">答对了！</text>
+          <text wx:else>答错了，正确答案是 {{correctAnswer}}</text>
+          <text wx:if="{{isCorrect && countdown > 0}}" class="countdown-tag">{{countdown}}秒后下一题</text>
+        </view>
+
+        <view wx:if="{{explanation}}" class="explanation-box">
+          <text class="explanation-label">解析</text>
+          <text class="explanation-text">{{explanation}}</text>
+        </view>
+
+      </view>
+
+      <view class="bottom-bar">
+        <view wx:if="{{hasHistory}}" class="prev-btn">上一题</view>
+        <!-- 收藏按钮（深色层镜像，纯视觉） -->
+        <view class="fav-btn {{isFavorited ? 'fav-active' : ''}}">
+          {{isFavorited ? '★ 已收藏' : '☆ 收藏'}}
+        </view>
+        <view wx:if="{{judged && (!isCorrect || !autoNext || fromHistory)}}" class="next-btn">下一题</view>
+        <view wx:if="{{judged && isCorrect && autoNext && countdown > 0 && !fromHistory}}" class="next-btn next-btn-skip">立即下一题</view>
+      </view>
+
+    </view>
+
+  </view>
+
+  <!-- ========== 答对粒子爆开（独立 overlay，不受双层主题影响） ========== -->
+  <view class="particle-overlay" wx:if="{{showParticles}}">
+    <view class="particle-burst">
+      <view class="particle-ring"></view>
+      <view class="particle-ring particle-ring-2"></view>
+      <view
+        wx:for="{{particles}}"
+        wx:key="id"
+        class="particle"
+        style="--angle: {{item.angle}}deg; --distance: {{item.distance}}rpx; --delay: {{item.delay}}s; width: {{item.size}}rpx; height: {{item.size}}rpx; background: {{item.color}};"
+      ></view>
+    </view>
+  </view>
+
+  <!-- ========== 本轮刷完提示 ========== -->
+  <view wx:if="{{poolFinished}}" class="review-done-mask">
+    <view class="review-done-card">
+      <text class="review-done-icon">✅</text>
+      <text class="review-done-title">题目已全部刷完！</text>
+      <text class="review-done-desc">已刷 {{answeredCount}} 题，要不要再来一轮？</text>
+      <view class="review-done-btns">
+        <view class="review-done-btn" bindtap="onRestartPool" hover-class="hover-btn" hover-stay-time="100">再来一轮</view>
+        <view class="review-done-btn review-done-back" bindtap="onPoolBackHome" hover-class="hover-btn" hover-stay-time="100">返回</view>
+      </view>
+    </view>
+  </view>
+
+</view>

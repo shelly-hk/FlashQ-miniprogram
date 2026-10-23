@@ -1,0 +1,354 @@
+<!--
+  自主题库列表页
+  --------------------------------------------------
+  双层主题：浅色层 + 深色层（clip-path 圆形裁切）
+  主题切换从触摸点圆形扩散，与首页一致
+-->
+
+<wxs module="cl">
+module.exports = {
+  isCorrectOpt: function(correctAnswer, firstChar) {
+    if (!correctAnswer || !firstChar) return false;
+    return correctAnswer.indexOf(firstChar) > -1;
+  }
+};
+</wxs>
+
+<view class="cl-container font-{{fontScale}}" style="background-color: {{darkMode ? '#1A2628' : ''}};">
+
+  <!-- ========== BGM 开关按钮（音符）—— 唱片本体，开启时自带旋转 ========== -->
+  <view wx:if="{{!manageMode}}" class="bgm-toggle-btn {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <text class="bgm-toggle-icon">♪</text>
+  </view>
+
+  <!-- ========== 唱片杆（唱臂）：播放时落下搭在唱片上，停止时抬起 ========== -->
+  <view wx:if="{{!manageMode}}" class="bgm-arm {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <view class="bgm-arm-weight"></view>
+    <view class="bgm-arm-rod"></view>
+    <view class="bgm-arm-head"></view>
+    <view class="bgm-arm-pivot"></view>
+  </view>
+
+  <!-- ========== 深色模式切换按钮（管理模式下隐藏，避免与全选按钮重叠） ========== -->
+  <view wx:if="{{!manageMode}}" class="theme-toggle-btn" catchtap="onToggleTheme">
+    <text class="theme-icon">{{darkMode ? '🌙' : '☀️'}}</text>
+  </view>
+
+  <!-- ========== 浅色层（底层，可交互） ==========
+       照抄首页机制：浅色层永远不挂 dark 类 → 永远继承 .custom-list-page 的日间变量
+       （--color-card/--color-text 等恒浅）。夜间变量定义在 .custom-list-page.dark，
+       而只有深色层挂了 dark 类（class="custom-list-page dark ... dark-layer"），
+       所以所有 .custom-list-page.dark .xxx 规则天然只作用于深色层 —— 浅色层卡片在扩散
+       圆扫到之前永远是浅色，扩散扫到哪、深色层覆盖到哪、才变深。 -->
+  <view class="custom-list-page theme-layer light-layer">
+
+    <!-- ========== 分类筛选栏（展开/收起） ========== -->
+    <view class="filter-bar" bindtap="onToggleCategoryPanel" hover-class="hover-row" hover-stay-time="100">
+      <text class="filter-label">{{selectedCategoryName}}</text>
+      <text class="filter-arrow {{showCategoryPanel ? 'arrow-up' : ''}}">›</text>
+    </view>
+
+    <!-- 分类筛选面板（flex 自动换行，避免加号被挤到右上角圆框遮挡） -->
+    <view wx:if="{{showCategoryPanel}}" class="filter-panel">
+      <view class="filter-pill {{selectedCategoryId === 0 ? 'pill-active' : ''}}"
+            data-id="{{0}}" data-name="全部" bindtap="onSelectCategory"
+            hover-class="hover-pill" hover-stay-time="100">全部</view>
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        class="filter-pill {{selectedCategoryId === item.id ? 'pill-active' : ''}}"
+        data-id="{{item.id}}" data-name="{{item.name}}" data-isdefault="{{item.isDefault}}"
+        bindtap="onSelectCategory" catchlongpress="onLongPressCategory"
+        hover-class="hover-pill" hover-stay-time="100"
+      >{{item.name}}{{item.isDefault ? '' : '·' + item.questionCount}}</view>
+      <view class="filter-pill filter-add" bindtap="onCreateCategory"
+            hover-class="hover-pill" hover-stay-time="100">＋ 添加</view>
+    </view>
+    <view wx:if="{{!showCategoryPanel}}" class="category-tip">提示：点击分类条可展开管理，长按自定义分类可重命名或删除</view>
+
+    <!-- ========== 顶部操作栏 ========== -->
+    <view class="top-bar">
+      <view class="total-info">共 {{total}} 道题{{selectedCategoryName !== '全部' ? ' · ' + selectedCategoryName : ''}}</view>
+      <view class="top-actions">
+        <view wx:if="{{!manageMode}}" class="upload-btn js-entry-upload" bindtap="onUpload" hover-class="hover-btn" hover-stay-time="100">
+          去上传
+        </view>
+        <view wx:if="{{!manageMode}}" class="practice-btn js-entry-practice" bindtap="onPractice" hover-class="hover-btn" hover-stay-time="100">
+          开始刷题
+        </view>
+        <view wx:if="{{!manageMode && total > 0}}" class="manage-btn" bindtap="onEnterManage" hover-class="hover-btn" hover-stay-time="100">
+          管理
+        </view>
+      </view>
+    </view>
+
+    <!-- ========== 管理模式固定栏 ========== -->
+    <view wx:if="{{manageMode}}" class="manage-top-bar">
+      <view class="manage-cancel-btn" bindtap="onExitManage" hover-class="hover-btn" hover-stay-time="100">取消</view>
+      <view class="manage-top-info">已选 {{selectedCount}}/{{list.length}} 道（本页）</view>
+      <text class="manage-select-all-btn" bindtap="onToggleAll" hover-class="hover-btn" hover-stay-time="100">{{allSelected ? '取消全选' : '全选本页'}}</text>
+    </view>
+
+    <!-- ========== 空状态 ========== -->
+    <view wx:if="{{!loading && list.length === 0}}" class="empty-state">
+      <view class="empty-icon">📝</view>
+      <text class="empty-text">自主题库还是空的</text>
+      <text class="empty-hint">上传文件或导入题目，开始自主题库刷题</text>
+      <view class="empty-btn" bindtap="onUpload" hover-class="hover-btn" hover-stay-time="100">
+        去上传
+      </view>
+    </view>
+
+    <!-- ========== 题目列表 ========== -->
+    <view wx:if="{{list.length > 0}}" class="question-list {{manageMode ? 'manage-active' : ''}}">
+      <view
+        wx:for="{{list}}"
+        wx:key="id"
+        class="question-item {{manageMode && selectedIds[item.id] ? 'item-selected' : ''}}"
+        data-id="{{item.id}}"
+        catchtap="{{manageMode ? 'onToggleSelect' : ''}}"
+      >
+        <view wx:if="{{manageMode}}" class="select-indicator {{selectedIds[item.id] ? 'checked' : ''}}">
+          <text wx:if="{{selectedIds[item.id]}}" class="check-icon">✓</text>
+        </view>
+        <view class="item-tags">
+          <view class="item-source">
+            <text class="source-icon">📄</text>
+            <text class="source-name">{{item.sourceFileName}}</text>
+          </view>
+          <view class="item-tags-right">
+            <view wx:if="{{manageMode && item.isFavorited}}" class="item-fav-badge">⭐ 已收藏</view>
+            <view wx:if="{{item.categoryName}}" class="item-category">{{item.categoryName}}</view>
+            <view class="item-difficulty difficulty-{{item.difficulty}}">
+              {{item.difficulty === 1 ? '初级' : item.difficulty === 2 ? '中级' : '高级'}}
+            </view>
+          </view>
+        </view>
+        <view class="item-content">{{item.content}}</view>
+        <view class="item-options">
+          <view
+            wx:for="{{item.options}}"
+            wx:for-item="opt"
+            wx:for-index="oi"
+            wx:key="oi"
+            class="item-option {{cl.isCorrectOpt(item.correctAnswer, opt[0]) ? 'item-opt-correct' : ''}}"
+          >
+            <text>{{opt}}</text>
+            <text wx:if="{{cl.isCorrectOpt(item.correctAnswer, opt[0])}}" class="opt-correct-tag">正确</text>
+          </view>
+        </view>
+        <view wx:if="{{item.explanation}}" class="item-explanation">
+          解析：{{item.explanation}}
+        </view>
+        <view class="item-actions">
+          <text class="item-time">{{item.createTime}}</text>
+          <view class="item-action-btns">
+            <view class="fav-btn {{item.isFavorited ? 'fav-active' : ''}}" catchtap="onToggleItemFavorite" data-id="{{item.id}}" data-index="{{index}}" hover-class="hover-btn" hover-stay-time="100">
+              {{item.isFavorited ? '已收藏' : '收藏'}}
+            </view>
+            <view class="category-btn" catchtap="onChangeCategory" data-id="{{item.id}}" data-index="{{index}}" hover-class="hover-btn" hover-stay-time="100">
+              修改分类
+            </view>
+            <view class="delete-btn" catchtap="onDelete" data-id="{{item.id}}" data-index="{{index}}" hover-class="hover-btn" hover-stay-time="100">
+              删除
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ========== 加载中 ========== -->
+    <view wx:if="{{loading}}" class="loading-more"><text>加载中...</text></view>
+
+    <!-- ========== 分页控制栏 ========== -->
+    <view wx:if="{{!loading && totalPages > 1}}" class="pagination-bar">
+      <view class="page-btn {{page <= 1 ? 'page-btn-disabled' : ''}}" bindtap="onPrevPage" hover-class="hover-btn" hover-stay-time="100">
+        上一页
+      </view>
+      <view class="page-info">第 {{page}}/{{totalPages}} 页</view>
+      <view class="page-btn {{page >= totalPages ? 'page-btn-disabled' : ''}}" bindtap="onNextPage" hover-class="hover-btn" hover-stay-time="100">
+        下一页
+      </view>
+    </view>
+
+    <view wx:if="{{manageMode}}" style="height: 140rpx;"></view>
+
+  </view>
+
+  <!-- ========== 深色层（顶层，圆形裁切，纯视觉） ==========
+       用 wx:if 按需创建：节点要被实际绘制（哪怕被 circle(0) 裁空）才能作为
+       clip-path 过渡的插值起点；若改成常驻 + visibility:hidden，浏览器没有
+       "已渲染的上一帧"，circle(0)→circle(maxRadius) 的扩散动画就播不出来。
+       深色层 pointer-events:none，点击穿透到底层；z-index:2 在浅色层之上。
+       入场与切换的扩散动画在 onShow / onToggleTheme 中驱动。 -->
+  <view class="custom-list-page dark theme-layer dark-layer {{clipNoTransition ? 'no-transition' : ''}}"
+        wx:if="{{darkLayerVisible}}"
+        style="clip-path: {{darkClipPath}}; -webkit-clip-path: {{darkClipPath}};">
+
+    <!-- ========== 分类筛选栏（展开/收起） ========== -->
+    <view class="filter-bar">
+      <text class="filter-label">{{selectedCategoryName}}</text>
+      <text class="filter-arrow {{showCategoryPanel ? 'arrow-up' : ''}}">›</text>
+    </view>
+
+    <view wx:if="{{showCategoryPanel}}" class="filter-panel">
+      <view class="filter-pill {{selectedCategoryId === 0 ? 'pill-active' : ''}}">全部</view>
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        class="filter-pill {{selectedCategoryId === item.id ? 'pill-active' : ''}}"
+      >{{item.name}}{{item.isDefault ? '' : '·' + item.questionCount}}</view>
+      <view class="filter-pill filter-add">＋ 添加</view>
+    </view>
+    <view wx:if="{{!showCategoryPanel}}" class="category-tip">提示：点击分类条可展开管理，长按自定义分类可重命名或删除</view>
+
+    <view class="top-bar">
+      <view class="total-info">共 {{total}} 道题{{selectedCategoryName !== '全部' ? ' · ' + selectedCategoryName : ''}}</view>
+      <view class="top-actions">
+        <view wx:if="{{!manageMode}}" class="upload-btn">去上传</view>
+        <view wx:if="{{!manageMode}}" class="practice-btn">开始刷题</view>
+        <view wx:if="{{!manageMode && total > 0}}" class="manage-btn">管理</view>
+      </view>
+    </view>
+
+    <view wx:if="{{manageMode}}" class="manage-top-bar">
+      <view class="manage-cancel-btn">取消</view>
+      <view class="manage-top-info">已选 {{selectedCount}}/{{list.length}} 道（本页）</view>
+      <text class="manage-select-all-btn">{{allSelected ? '取消全选' : '全选本页'}}</text>
+    </view>
+
+    <view wx:if="{{!loading && list.length === 0}}" class="empty-state">
+      <view class="empty-icon">📝</view>
+      <text class="empty-text">自主题库还是空的</text>
+      <text class="empty-hint">上传文件或导入题目，开始自主题库刷题</text>
+      <view class="empty-btn">去上传</view>
+    </view>
+
+    <view wx:if="{{list.length > 0}}" class="question-list {{manageMode ? 'manage-active' : ''}}">
+      <view
+        wx:for="{{list}}"
+        wx:key="id"
+        class="question-item {{manageMode && selectedIds[item.id] ? 'item-selected' : ''}}"
+      >
+        <view wx:if="{{manageMode}}" class="select-indicator {{selectedIds[item.id] ? 'checked' : ''}}">
+          <text wx:if="{{selectedIds[item.id]}}" class="check-icon">✓</text>
+        </view>
+        <view class="item-tags">
+          <view class="item-source">
+            <text class="source-icon">📄</text>
+            <text class="source-name">{{item.sourceFileName}}</text>
+          </view>
+          <view class="item-tags-right">
+            <view wx:if="{{manageMode && item.isFavorited}}" class="item-fav-badge">⭐ 已收藏</view>
+            <view wx:if="{{item.categoryName}}" class="item-category">{{item.categoryName}}</view>
+            <view class="item-difficulty difficulty-{{item.difficulty}}">
+              {{item.difficulty === 1 ? '初级' : item.difficulty === 2 ? '中级' : '高级'}}
+            </view>
+          </view>
+        </view>
+        <view class="item-content">{{item.content}}</view>
+        <view class="item-options">
+          <view
+            wx:for="{{item.options}}"
+            wx:for-item="opt"
+            wx:for-index="oi"
+            wx:key="oi"
+            class="item-option {{cl.isCorrectOpt(item.correctAnswer, opt[0]) ? 'item-opt-correct' : ''}}"
+          >
+            <text>{{opt}}</text>
+            <text wx:if="{{cl.isCorrectOpt(item.correctAnswer, opt[0])}}" class="opt-correct-tag">正确</text>
+          </view>
+        </view>
+        <view wx:if="{{item.explanation}}" class="item-explanation">
+          解析：{{item.explanation}}
+        </view>
+        <view class="item-actions">
+          <text class="item-time">{{item.createTime}}</text>
+          <view class="item-action-btns">
+            <view class="fav-btn {{item.isFavorited ? 'fav-active' : ''}}">
+              {{item.isFavorited ? '已收藏' : '收藏'}}
+            </view>
+            <view class="category-btn">修改分类</view>
+            <view class="delete-btn">删除</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="loading-more"><text>加载中...</text></view>
+
+    <view wx:if="{{!loading && totalPages > 1}}" class="pagination-bar">
+      <view class="page-btn {{page <= 1 ? 'page-btn-disabled' : ''}}">上一页</view>
+      <view class="page-info">第 {{page}}/{{totalPages}} 页</view>
+      <view class="page-btn {{page >= totalPages ? 'page-btn-disabled' : ''}}">下一页</view>
+    </view>
+
+    <view wx:if="{{manageMode}}" style="height: 140rpx;"></view>
+
+  </view>
+
+</view>
+
+<!-- ========== 批量操作栏 ========== -->
+<view wx:if="{{manageMode}}" class="batch-bar {{darkMode ? 'dark' : ''}}">
+  <view class="batch-actions">
+    <view class="batch-btn batch-fav {{selectedCount === 0 ? 'btn-disabled' : ''}}" bindtap="onBatchFavorite" hover-class="hover-btn" hover-stay-time="100">
+      收藏
+    </view>
+    <view class="batch-btn batch-assign {{selectedCount === 0 ? 'btn-disabled' : ''}}" bindtap="onBatchAssign" hover-class="hover-btn" hover-stay-time="100">
+      归入分类
+    </view>
+    <view class="batch-btn batch-delete {{selectedCount === 0 ? 'btn-disabled' : ''}}" bindtap="onBatchDelete" hover-class="hover-btn" hover-stay-time="100">
+      删除
+    </view>
+  </view>
+</view>
+
+<!-- ========== 新手引导蒙层（custom-upload / custom-practice 两步） ==========
+     - 独立 overlay，不受双层主题影响
+     - Spotlight 镂空高亮「去上传」或「开始刷题」按钮
+     - 气泡给出标题 / 描述 / 操作预期 / 进度 / 主按钮 -->
+<view wx:if="{{onboardingStep}}"
+      class="ob-mask {{onboardingClosing ? 'closing' : ''}} {{darkMode ? 'dark' : ''}}"
+      catchtap="onOnboardingNoop" catchtouchmove="onOnboardingNoop">
+
+  <!-- Spotlight 镂空层：通过 box-shadow 投射暗影制造挖洞效果 -->
+  <view wx:if="{{onboardingSpotlight}}"
+        class="ob-spotlight"
+        style="left:{{onboardingSpotlight.left}}px;top:{{onboardingSpotlight.top}}px;width:{{onboardingSpotlight.width}}px;height:{{onboardingSpotlight.height}}px;">
+  </view>
+
+  <!-- 单步气泡：根据 spotlight 位置动态放置在上方或下方 -->
+  <view class="ob-bubble-wrap with-target with-target-{{onboardingBubblePlacement}}">
+    <view class="ob-bubble">
+
+      <!-- 头部：步骤号 + 图标 -->
+      <view class="ob-bubble-head">
+        <view class="ob-bubble-orb ob-bubble-orb-a"></view>
+        <view class="ob-bubble-orb ob-bubble-orb-b"></view>
+        <text class="ob-bubble-step">{{onboardingStepIndex + 1}} / {{onboardingTotal}}</text>
+        <text class="ob-bubble-icon">{{onboardingStep.icon}}</text>
+      </view>
+
+      <!-- 主体：标题 / 描述 / 操作预期 -->
+      <text class="ob-bubble-title">{{onboardingStep.title}}</text>
+      <text class="ob-bubble-desc">{{onboardingStep.desc}}</text>
+      <view wx:if="{{onboardingStep.expectation}}" class="ob-bubble-expect">
+        <text class="ob-bubble-expect-icon">→</text>
+        <text class="ob-bubble-expect-text">{{onboardingStep.expectation}}</text>
+      </view>
+
+      <!-- 进度条 -->
+      <view class="ob-bubble-progress">
+        <view class="ob-bubble-progress-bar" style="width:{{(onboardingStepIndex + 1) * 100 / onboardingTotal}}%;"></view>
+      </view>
+
+      <!-- 操作区：主按钮 -->
+      <view class="ob-bubble-actions">
+        <view class="ob-bubble-primary" catchtap="onOnboardingPrimary">{{onboardingStep.primaryText}}</view>
+      </view>
+
+    </view>
+  </view>
+
+</view>

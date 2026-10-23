@@ -1,0 +1,81 @@
+/**
+ * 自定义底部导航栏 — 液态指示器
+ * --------------------------------------------------
+ * 指示背景为半透明药丸形，不遮挡文字
+ * 标签文字和图标始终稳定，仅指示背景移动
+ */
+
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  height: 100rpx;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #ffffff;
+  border-top: 1rpx solid #e8e8e8;
+  z-index: 999;
+}
+
+/* 液态指示背景 — 通过 CSS 百分比定位，无 JS 测量延迟 */
+.tab-indicator {
+  position: absolute;
+  top: 8rpx;
+  height: 84rpx;
+  width: 33.333%;
+  border-radius: 20rpx;
+  background: rgba(25, 137, 250, 0.12);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 三个 tab 等宽，指示器通过 left 百分比瞬移 */
+.indicator-0 { left: 0%; }
+.indicator-1 { left: 33.333%; }
+.indicator-2 { left: 66.666%; }
+
+/* 标签项 */
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.tab-icon {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+.tab-text {
+  font-size: 20rpx;
+  color: #999999;
+  transition: color 0.2s ease;
+}
+
+.tab-active .tab-text {
+  color: #1989fa;
+  font-weight: 500;
+}
+
+/* ========== 深色模式 ========== */
+.tab-bar.dark {
+  background: #1A2628;
+  border-top: 1rpx solid #2A3A3C;
+}
+.tab-bar.dark .tab-text {
+  color: #6B7D7C;
+}
+.tab-bar.dark .tab-active .tab-text {
+  color: #2BC8C4;
+}
+.tab-bar.dark .tab-indicator {
+  background: rgba(43, 200, 196, 0.15);
+}

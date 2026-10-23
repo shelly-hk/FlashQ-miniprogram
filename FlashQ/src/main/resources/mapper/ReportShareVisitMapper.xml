@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.ReportShareVisitMapper">
+
+    <resultMap id="visitMap" type="com.flashq.entity.ReportShareVisit">
+        <id property="id" column="id"/>
+        <result property="posterId" column="poster_id"/>
+        <result property="ownerId" column="owner_id"/>
+        <result property="scene" column="scene"/>
+        <result property="entryPage" column="entry_page"/>
+        <result property="visitorIp" column="visitor_ip"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.flashq.entity.ReportShareVisit" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO report_share_visit (poster_id, owner_id, scene, entry_page, visitor_ip)
+        VALUES (#{posterId}, #{ownerId}, #{scene}, #{entryPage}, #{visitorIp})
+    </insert>
+
+    <select id="countByPoster" resultType="int">
+        SELECT COUNT(*) FROM report_share_visit WHERE poster_id = #{posterId}
+    </select>
+
+</mapper>

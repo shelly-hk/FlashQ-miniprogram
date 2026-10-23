@@ -1,0 +1,110 @@
+<!--
+  专项复习选择页
+  --------------------------------------------------
+  选择复习来源：公共题库 / 自主题库 的错题和收藏
+  点击后弹出科目/分类选择弹窗
+-->
+
+<view class="review-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <view class="review-header">
+    <text class="review-title">专项复习</text>
+    <text class="review-subtitle">选择复习来源</text>
+  </view>
+
+  <!-- ========== 错题本 ========== -->
+  <view class="review-group">
+    <text class="group-label">错题本</text>
+    <view class="review-list">
+      <view class="review-card" catchtap="onGoWrong" hover-class="hover-card" hover-stay-time="100">
+        <text class="review-icon">📚</text>
+        <view class="review-info">
+          <text class="review-name">公共题库</text>
+          <text class="review-desc">针对公共错题强化练习</text>
+        </view>
+        <text class="review-arrow">›</text>
+      </view>
+      <view class="review-card" catchtap="onGoCodeWrong" hover-class="hover-card" hover-stay-time="100">
+        <text class="review-icon">💻</text>
+        <view class="review-info">
+          <text class="review-name">代码题库</text>
+          <text class="review-desc">针对代码错题强化练习</text>
+        </view>
+        <text class="review-arrow">›</text>
+      </view>
+      <view class="review-card" catchtap="onGoCustomWrong" hover-class="hover-card" hover-stay-time="100">
+        <text class="review-icon">📝</text>
+        <view class="review-info">
+          <text class="review-name">自主题库</text>
+          <text class="review-desc">针对自定义错题强化练习</text>
+        </view>
+        <text class="review-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 收藏夹 ========== -->
+  <view class="review-group">
+    <text class="group-label">收藏夹</text>
+    <view class="review-list">
+      <view class="review-card" catchtap="onGoFavorite" hover-class="hover-card" hover-stay-time="100">
+        <text class="review-icon">📚</text>
+        <view class="review-info">
+          <text class="review-name">公共题库</text>
+          <text class="review-desc">复习公共收藏的重点题</text>
+        </view>
+        <text class="review-arrow">›</text>
+      </view>
+      <view class="review-card" catchtap="onGoCodeFavorite" hover-class="hover-card" hover-stay-time="100">
+        <text class="review-icon">💻</text>
+        <view class="review-info">
+          <text class="review-name">代码题库</text>
+          <text class="review-desc">复习代码收藏的重点题</text>
+        </view>
+        <text class="review-arrow">›</text>
+      </view>
+      <view class="review-card" catchtap="onGoInterviewFavorite" hover-class="hover-card" hover-stay-time="100">
+        <text class="review-icon">🎯</text>
+        <view class="review-info">
+          <text class="review-name">企业面试题库</text>
+          <text class="review-desc">复习面试收藏的重点题</text>
+        </view>
+        <text class="review-arrow">›</text>
+      </view>
+      <view class="review-card" catchtap="onGoCustomFavorite" hover-class="hover-card" hover-stay-time="100">
+        <text class="review-icon">📝</text>
+        <view class="review-info">
+          <text class="review-name">自主题库</text>
+          <text class="review-desc">复习自定义收藏的重点题</text>
+        </view>
+        <text class="review-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+</view>
+
+<!-- ========== 科目/分类筛选弹窗 ========== -->
+<view wx:if="{{showFilter}}" class="filter-mask" bindtap="onCloseFilter">
+  <view class="filter-sheet {{darkMode ? 'dark' : ''}}" catchtap="noop">
+    <view class="sheet-header">
+      <text class="sheet-title">选择{{filterLabel}}</text>
+      <view class="sheet-close" bindtap="onCloseFilter">✕</view>
+    </view>
+    <text class="sheet-hint">选择「全部」可复习所有题目，或选择特定{{filterLabel}}进行针对性练习</text>
+    <scroll-view scroll-y class="sheet-scroll">
+      <view class="sheet-tabs">
+        <view
+          wx:for="{{filterTabs}}"
+          wx:key="id"
+          class="sheet-tab {{activeFilterId === item.id ? 'sheet-tab-active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="onSelectFilter"
+          hover-class="hover-pill"
+          hover-stay-time="100"
+        >{{item.name}}</view>
+      </view>
+    </scroll-view>
+    <view class="sheet-btn" bindtap="onStartReview" hover-class="hover-btn" hover-stay-time="100">开始复习</view>
+  </view>
+</view>

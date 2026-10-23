@@ -1,0 +1,446 @@
+/**
+ * 代码题库入口页样式
+ * --------------------------------------------------
+ * 沿用首页蒂芙尼蓝 + 玄青配色
+ */
+
+.bank-page {
+  --color-bg: #E8F6F5;
+  --color-card: #FFFFFF;
+  --color-border: #C8E6E4;
+  --color-text: #2D3A3A;
+  --color-text-hint: #6B9F9C;
+  --color-primary: #0ABAB5;
+  --brand-tile: linear-gradient(135deg, #E3F2FD 0%, #DCEDFB 100%);
+  --brand-tile-warm: linear-gradient(135deg, #FFF4E0 0%, #FFE9C9 100%);
+
+  padding: 0 48rpx;
+  min-height: 100vh;
+  background:
+    radial-gradient(90% 55% at 85% -8%, rgba(10, 186, 181, 0.10) 0%, transparent 62%),
+    linear-gradient(180deg, #EDF8F7 0%, #E8F6F5 45%, #E4F3F1 100%);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== 顶部说明 ========== */
+.bank-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 72rpx;
+  padding-bottom: 56rpx;
+  animation: fadeInUp 0.5s ease both;
+}
+
+/* 图标徽章：柔和圆底 + 光晕，替代裸奔的大 emoji */
+.bank-badge {
+  position: relative;
+  width: 148rpx;
+  height: 148rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-tile);
+  border: 2rpx solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12rpx 32rpx rgba(10, 186, 181, 0.16), inset 0 2rpx 4rpx rgba(255, 255, 255, 0.9);
+  margin-bottom: 28rpx;
+}
+
+.bank-badge-glow {
+  position: absolute;
+  top: -24rpx;
+  left: -24rpx;
+  right: -24rpx;
+  bottom: -24rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(10, 186, 181, 0.16) 0%, transparent 68%);
+  animation: badgeGlow 3.6s ease-in-out infinite;
+}
+
+@keyframes badgeGlow {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+
+.bank-icon {
+  position: relative;
+  z-index: 1;
+  font-size: 76rpx;
+  line-height: 1;
+}
+
+.bank-title {
+  font-size: calc(44rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 4rpx;
+}
+
+.bank-subtitle {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  margin-top: 12rpx;
+  letter-spacing: 2rpx;
+}
+
+/* ========== 刷题模式卡片 ========== */
+.mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 28rpx;
+}
+
+.mode-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40rpx 36rpx;
+  background: var(--color-card);
+  border: 1rpx solid var(--color-border);
+  border-radius: 20rpx;
+  /* backwards（而非 both）：避免动画结束后占用 transform 导致按压 scale 失效 */
+  animation: fadeInUp 0.5s ease backwards;
+  /* 抬起复原时 Q 弹回弹（带轻微过冲） */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.26s ease, border-color 0.26s ease,
+              box-shadow 0.26s ease, opacity 0.26s ease;
+  box-shadow: 0 6rpx 24rpx rgba(10, 186, 181, 0.08);
+}
+
+/* 快速刷=暖色（能量感），质量刷=蓝色（深度感），淡彩不花哨 */
+.mode-list .mode-card:first-child {
+  background: linear-gradient(150deg, #FFFFFF 0%, #FFF8EC 100%);
+  border-color: #F5DEB8;
+}
+
+.mode-list .mode-card:last-child {
+  background: linear-gradient(150deg, #FFFFFF 0%, #EDF6FC 100%);
+  border-color: #C9DFF0;
+}
+
+.mode-card:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.mode-card-left {
+  display: flex;
+  align-items: center;
+}
+
+/* 模式图标瓷砖 */
+.mode-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50rpx;
+  margin-right: 28rpx;
+  line-height: 1;
+  flex-shrink: 0;
+  background: var(--brand-tile-warm);
+  box-shadow: inset 0 2rpx 3rpx rgba(255, 255, 255, 0.9), 0 4rpx 12rpx rgba(10, 186, 181, 0.08);
+}
+
+.mode-list .mode-card:last-child .mode-icon {
+  background: var(--brand-tile);
+}
+
+.mode-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mode-title {
+  font-size: calc(34rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: 2rpx;
+}
+
+.mode-desc {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  margin-top: 8rpx;
+  letter-spacing: 1rpx;
+}
+
+.mode-arrow {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: rgba(10, 186, 181, 0.08);
+  color: var(--color-primary);
+  font-size: 34rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+  padding-left: 4rpx;
+  box-sizing: border-box;
+}
+
+/* 按压反馈：瞬间缩小 + 品牌蓝高亮 */
+.card-hover {
+  transform: scale(0.96);
+  background: rgba(135, 206, 235, 0.30) !important;
+  border-color: rgba(135, 206, 235, 0.85);
+  box-shadow: 0 6rpx 20rpx rgba(135, 206, 235, 0.35);
+  transition-duration: 0.04s;
+}
+
+/* 深色模式按压（品牌蓝 #64B5F6 系） */
+.bank-page.dark .mode-card.card-hover {
+  background: rgba(100, 181, 246, 0.22) !important;
+  border-color: rgba(100, 181, 246, 0.70);
+  box-shadow: 0 6rpx 20rpx rgba(100, 181, 246, 0.30);
+}
+
+/* ========== 动画 ========== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========== 深色模式 ========== */
+.bank-page.dark {
+  /* 深色背景：显式覆盖日间硬编码渐变，否则深模式下会发白 */
+  background:
+    radial-gradient(90% 55% at 85% -8%, rgba(10, 186, 181, 0.12) 0%, transparent 62%),
+    linear-gradient(180deg, #20244A 0%, #1A1A2E 45%, #15152B 100%);
+  --color-bg: #1A1A2E;
+  --color-card: #252540;
+  --color-border: #353560;
+  --color-text: #E8E8F0;
+  --color-text-hint: #8888AA;
+  --color-primary: #5EEAD4;
+  --brand-tile: linear-gradient(135deg, rgba(58, 95, 126, 0.38) 0%, rgba(42, 74, 102, 0.38) 100%);
+  --brand-tile-warm: linear-gradient(135deg, rgba(120, 100, 70, 0.32) 0%, rgba(90, 75, 52, 0.32) 100%);
+}
+
+.bank-page.dark .mode-list .mode-card:first-child {
+  background: linear-gradient(150deg, #252540 0%, #2E2A3C 100%);
+  border-color: #3D3852;
+}
+
+.bank-page.dark .mode-list .mode-card:last-child {
+  background: linear-gradient(150deg, #252540 0%, #26324A 100%);
+  border-color: #35425E;
+}
+
+.bank-page.dark .mode-arrow {
+  background: rgba(94, 234, 212, 0.12);
+}
+
+.bank-page.dark .bank-badge {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.3), inset 0 2rpx 4rpx rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================================
+   第二步：科目选择（设计语言对齐 quiz-setup）
+   ============================================================ */
+
+/* 顶部返回链接 */
+.setup-header {
+  position: relative;
+}
+
+.back-link {
+  position: absolute;
+  top: -8rpx;
+  left: -8rpx;
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 10rpx 20rpx 10rpx 12rpx;
+  border-radius: 24rpx;
+  background: var(--color-card);
+  border: 1rpx solid var(--color-border);
+  box-shadow: 0 4rpx 14rpx rgba(10, 186, 181, 0.08);
+  /* 抬起复原时 Q 弹回弹 */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.26s ease, opacity 0.26s ease;
+}
+
+.back-link-icon {
+  font-size: 30rpx;
+  color: var(--color-primary);
+  line-height: 1;
+  margin-top: -2rpx;
+}
+
+.back-link-text {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  letter-spacing: 1rpx;
+  line-height: 1;
+}
+
+/* 按压反馈：瞬间缩小 + 品牌蓝高亮 */
+.back-link-hover {
+  transform: scale(0.93);
+  background: rgba(135, 206, 235, 0.30) !important;
+  border-color: rgba(135, 206, 235, 0.85);
+  transition-duration: 0.04s;
+}
+
+.bank-page.dark .back-link.back-link-hover {
+  background: rgba(100, 181, 246, 0.22) !important;
+  border-color: rgba(100, 181, 246, 0.70);
+}
+
+/* 科目区块 */
+.section {
+  padding-top: 48rpx;
+  animation: fadeInUp 0.5s ease both;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: var(--color-text-hint);
+  margin-bottom: 28rpx;
+  letter-spacing: 2rpx;
+}
+
+/* 标签前的小竖线装饰（与 quiz-setup 一致） */
+.section-label::before {
+  content: '';
+  width: 8rpx;
+  height: 28rpx;
+  border-radius: 4rpx;
+  background: var(--color-primary);
+  margin-right: 16rpx;
+  opacity: 0.75;
+}
+
+/* 科目标签芯片 */
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.chip {
+  padding: 20rpx 40rpx;
+  background: var(--color-card);
+  border: 1rpx solid var(--color-border);
+  border-radius: 16rpx;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  /* 抬起复原时 Q 弹回弹 */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.26s ease, border-color 0.26s ease,
+              box-shadow 0.26s ease, color 0.26s ease;
+  box-shadow: 0 2rpx 10rpx rgba(10, 186, 181, 0.05);
+}
+
+/* 按压反馈：瞬间缩小 + 轻微变暗（选中/未选中底色通用） */
+.chip-hover {
+  transform: scale(0.93);
+  filter: brightness(0.96);
+  transition-duration: 0.04s;
+}
+
+.chip-active {
+  background: linear-gradient(135deg, #14CFC9 0%, #0ABAB5 100%);
+  color: #FFFFFF;
+  border-color: transparent;
+  font-weight: 500;
+  box-shadow: 0 6rpx 18rpx rgba(10, 186, 181, 0.32);
+}
+
+/* 加载提示 */
+.loading-hint {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  padding: 20rpx 0;
+}
+
+/* 开始按钮区 */
+.start-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding-bottom: 60rpx;
+}
+
+.selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  animation: fadeInUp 0.5s ease 0.12s both;
+}
+
+.summary-label {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  letter-spacing: 2rpx;
+}
+
+.summary-value {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: 1rpx;
+}
+
+.start-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 32rpx 0;
+  background: linear-gradient(135deg, #14CFC9 0%, #0AA8A3 100%);
+  color: #FFFFFF;
+  font-size: calc(32rpx * var(--font-scale, 1));
+  font-weight: 600;
+  border-radius: 20rpx;
+  letter-spacing: 4rpx;
+  box-shadow: 0 10rpx 28rpx rgba(10, 168, 163, 0.35);
+  /* backwards（而非 both）：避免动画结束后占用 transform 导致按压 scale 失效 */
+  animation: fadeInUp 0.5s ease 0.16s backwards;
+  /* 抬起复原时 Q 弹回弹（带轻微过冲） */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.26s ease, box-shadow 0.26s ease;
+}
+
+.start-btn-icon {
+  font-size: 24rpx;
+  line-height: 1;
+}
+
+/* 按压反馈：瞬间缩小 + 轻微变暗 */
+.btn-hover {
+  transform: scale(0.95);
+  filter: brightness(0.96);
+  transition-duration: 0.04s;
+}
+
+/* ---------- 深色模式补充（变量体系已覆盖大部分，仅微调阴影） ---------- */
+.bank-page.dark .back-link {
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.3);
+}
+
+.bank-page.dark .chip {
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.2);
+}

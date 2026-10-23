@@ -1,0 +1,579 @@
+<!--
+  首页（入口选择页）
+  --------------------------------------------------
+  双层内容：浅色层（底层）+ 深色层（顶层圆形裁切）
+  主题切换从触摸点圆形扩散，不缩放页面内容
+-->
+
+<!-- 滑动预览层（目标页面背景色） -->
+<view wx:if="{{swipePeekVisible}}" class="swipe-peek {{swipeAnimating ? 'swipe-peek-anim' : ''}}"
+  style="background:{{swipePeekColor}};transform:translateX({{swipePeekOffset}}px);"></view>
+
+<view class="home-page {{darkMode ? 'dark' : ''}} {{swipeAnimating ? 'swipe-animating' : ''}} font-{{fontScale}}"
+  style="transform: translateX({{swipeOffset}}px); background-color: {{darkMode ? '#1a1a1a' : ''}};"
+  bindtouchstart="onSwipeStart"
+  bindtouchmove="onSwipeMove"
+  bindtouchend="onSwipeEnd"
+  bindtouchcancel="onSwipeCancel">
+
+  <!-- ========== 顶部操作区：联系我们 / 使用说明（左上角艺术框） ========== -->
+  <view class="top-actions">
+    <view class="contact-entry" catchtap="onContactTap">
+      <text class="contact-entry-deco">✦</text>
+      <text class="contact-entry-text">联系我们</text>
+      <text class="contact-entry-deco">✦</text>
+    </view>
+    <view class="contact-entry guide-entry" catchtap="onGuideTap">
+      <text class="contact-entry-deco">✦</text>
+      <text class="contact-entry-text">使用说明</text>
+      <text class="contact-entry-deco">✦</text>
+    </view>
+  </view>
+
+  <!-- ========== BGM 开关按钮（音符）—— 唱片本体，开启时自带旋转 ========== -->
+  <view class="bgm-toggle {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <text class="bgm-toggle-icon">♪</text>
+  </view>
+
+  <!-- ========== 唱片杆（唱臂）：播放时落下搭在唱片上，停止时抬起 ========== -->
+  <view class="bgm-arm {{bgmEnabled ? 'on' : ''}} {{darkMode ? 'night' : ''}}" catchtap="onToggleBgm">
+    <view class="bgm-arm-weight"></view>
+    <view class="bgm-arm-rod"></view>
+    <view class="bgm-arm-head"></view>
+    <view class="bgm-arm-pivot"></view>
+  </view>
+
+  <!-- ========== 主题切换按钮 ========== -->
+  <view class="theme-toggle" catchtap="onToggleTheme">
+    <text class="toggle-icon">{{darkMode ? '🌙' : '☀️'}}</text>
+  </view>
+
+  <!-- ========== 浅色层（底层） ========== -->
+  <view class="theme-layer light-layer {{darkMode ? 'dark' : ''}}">
+
+    <!-- ========== 背景品牌装饰（小程序头像变体：FQ 印记 / 光环 / 星火） ========== -->
+    <view class="bg-decor">
+      <view class="bg-orb bg-orb-a"></view>
+      <view class="bg-orb bg-orb-b"></view>
+      <view class="bg-ring bg-ring-hero"></view>
+      <view class="brand-mark">
+        <view class="brand-mark-ring"></view>
+        <text class="brand-mark-text">FQ</text>
+        <view class="brand-mark-tail"></view>
+      </view>
+      <view class="bg-ring bg-ring-a"></view>
+      <text class="bg-spark bg-spark-1">✦</text>
+      <text class="bg-spark bg-spark-2">✦</text>
+      <text class="bg-spark bg-spark-3">•</text>
+      <text class="bg-spark bg-spark-4">•</text>
+    </view>
+
+    <view class="home-header">
+      <view class="brand-row">
+        <view class="brand-badge">
+          <text class="brand-badge-text">FQ</text>
+        </view>
+        <view class="brand-titles">
+          <text class="home-title">一句刷</text>
+          <text class="home-subtitle">选择刷题方式</text>
+        </view>
+      </view>
+      <view class="brand-tagline">
+        <text class="brand-tagline-deco">✦</text>
+        <text class="brand-tagline-text">FlashQ · 每天进步一点点</text>
+        <text class="brand-tagline-deco">✦</text>
+      </view>
+    </view>
+
+    <!-- ========== 入口卡片：2×2 双列宫格 + 通栏「专项复习」 ========== -->
+    <view class="entry-list">
+      <view class="entry-grid">
+        <view class="entry-card entry-card-grid tone-blue js-entry-random"
+              catchtap="onGoQuiz" hover-class="hover-card" hover-stay-time="100">
+          <view class="entry-icon">📝</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">随机刷题</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">海量题库，随时练习</text>
+          </view>
+        </view>
+        <view class="entry-card entry-card-grid tone-peach"
+              catchtap="onGoCodeBank" hover-class="hover-card" hover-stay-time="100">
+          <view class="entry-icon">💻</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">代码题库</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">代码输出，精准判断</text>
+          </view>
+        </view>
+        <view class="entry-card entry-card-grid tone-green"
+              catchtap="onGoInterviewBank" hover-class="hover-card" hover-stay-time="100">
+          <view class="entry-icon">🎯</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">企业面试题库</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">名企真题，校招必备</text>
+          </view>
+        </view>
+        <!-- 自主题库：右上角「核心功能」徽标 -->
+        <view class="entry-card entry-card-grid tone-purple js-entry-custom"
+              catchtap="onGoCustom" hover-class="hover-card" hover-stay-time="100">
+          <view class="featured-badge">
+            <text class="featured-badge-spark">✦</text>
+            <text class="featured-badge-text">核心功能</text>
+          </view>
+          <view class="entry-icon">📚</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">自主题库</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">{{customCountText}}</text>
+          </view>
+        </view>
+      </view>
+      <!-- 专项复习：通栏卡片 -->
+      <view class="entry-card entry-card-wide tone-violet"
+            catchtap="onGoReview" hover-class="hover-card" hover-stay-time="100">
+        <view class="entry-icon">🔁</view>
+        <view class="entry-info">
+          <text class="entry-title">专项复习</text>
+          <text class="entry-desc">错题本 / 收藏夹，针对性提升</text>
+        </view>
+        <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+      </view>
+    </view>
+
+    <!-- ========== 每日一言（按天轮换，给首页一点新鲜感） ========== -->
+    <view class="daily-quote">
+      <!-- 背景插画：远山 + 落日 + 飞鸟 + 溪流 + 阳光渐变（纯 CSS，不占用文字空间） -->
+      <view class="dq-art">
+        <image class="dq-scene dq-scene-day" src="/images/dq-scene.png" mode="scaleToFill" />
+        <image class="dq-scene dq-scene-night" src="/images/dq-scene-night.png" mode="scaleToFill" />
+        <view class="dq-glow"></view>
+        <view class="dq-sun"></view>
+        <view class="dq-cloud dq-cloud-1"></view>
+        <view class="dq-cloud dq-cloud-2"></view>
+        <view class="dq-cloud dq-cloud-3"></view>
+        <view class="dq-bird dq-bird-1"></view>
+        <view class="dq-bird dq-bird-2"></view>
+        <view class="dq-bird dq-bird-3"></view>
+        <view class="dq-bird dq-bird-4"></view>
+        <view class="dq-star dq-star-1"></view>
+        <view class="dq-star dq-star-2"></view>
+        <view class="dq-star dq-star-3"></view>
+        <view class="dq-star dq-star-4"></view>
+      </view>
+      <view class="daily-quote-head">
+        <text class="daily-quote-quote">“</text>
+        <text class="daily-quote-label">每日一言</text>
+        <text class="daily-quote-date">{{todayText}}</text>
+      </view>
+      <text class="daily-quote-text">{{dailyQuote}}</text>
+    </view>
+
+    <!-- ========== 新手引导入口（位于每日一言下方，仅完成/跳过引导后显示） ========== -->
+    <view wx:if="{{showOnboardingRecallEntry}}" class="contact-entry ob-recall-entry ob-recall-inline" catchtap="onOnboardingRecallOpen">
+      <text class="contact-entry-deco">✦</text>
+      <text class="contact-entry-text">新手引导</text>
+      <text class="contact-entry-deco">✦</text>
+    </view>
+
+    <view class="home-footer">
+      <view class="footer-divider">
+        <view class="footer-divider-line"></view>
+        <view class="footer-divider-ring"></view>
+        <view class="footer-divider-line"></view>
+      </view>
+      <text class="footer-text" catchtap="onCopyICP">粤ICP备2026147363号-1X</text>
+    </view>
+
+  </view>
+
+  <!-- ========== 深色层（顶层，圆形裁切） ==========
+       常驻 DOM（不再用 wx:if）：wx:if 会在切到夜间模式时才创建整层节点，
+       卡片 / 徽标的入场动画（fadeInUp / badgePop）会跟着重播一遍，
+       看起来就像"选项卡和按钮重新加载了一次"。
+       常驻后入场动画只在页面首次渲染时播放一次，切换主题只做 clip-path 扩散。 -->
+  <view class="theme-layer dark-layer {{clipNoTransition ? 'no-transition' : ''}}"
+        style="clip-path: {{darkClipPath}}; -webkit-clip-path: {{darkClipPath}};">
+
+    <!-- ========== 背景品牌装饰（与浅色层保持一致） ========== -->
+    <view class="bg-decor">
+      <view class="bg-orb bg-orb-a"></view>
+      <view class="bg-orb bg-orb-b"></view>
+      <view class="bg-ring bg-ring-hero"></view>
+      <view class="brand-mark">
+        <view class="brand-mark-ring"></view>
+        <text class="brand-mark-text">FQ</text>
+        <view class="brand-mark-tail"></view>
+      </view>
+      <view class="bg-ring bg-ring-a"></view>
+      <text class="bg-spark bg-spark-1">✦</text>
+      <text class="bg-spark bg-spark-2">✦</text>
+      <text class="bg-spark bg-spark-3">•</text>
+      <text class="bg-spark bg-spark-4">•</text>
+    </view>
+
+    <view class="home-header">
+      <view class="brand-row">
+        <view class="brand-badge">
+          <text class="brand-badge-text">FQ</text>
+        </view>
+        <view class="brand-titles">
+          <text class="home-title">一句刷</text>
+          <text class="home-subtitle">选择刷题方式</text>
+        </view>
+      </view>
+      <view class="brand-tagline">
+        <text class="brand-tagline-deco">✦</text>
+        <text class="brand-tagline-text">FlashQ · 每天进步一点点</text>
+        <text class="brand-tagline-deco">✦</text>
+      </view>
+    </view>
+
+    <!-- 深色层同步：按压反馈由 pressedKey 驱动（本层无事件，点击穿透到底层） -->
+    <view class="entry-list">
+      <view class="entry-grid">
+        <view class="entry-card entry-card-grid tone-blue js-entry-random {{pressedKey === 'quiz' ? 'hover-card' : ''}}">
+          <view class="entry-icon">📝</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">随机刷题</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">海量题库，随时练习</text>
+          </view>
+        </view>
+        <view class="entry-card entry-card-grid tone-peach {{pressedKey === 'code' ? 'hover-card' : ''}}">
+          <view class="entry-icon">💻</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">代码题库</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">代码输出，精准判断</text>
+          </view>
+        </view>
+        <view class="entry-card entry-card-grid tone-green {{pressedKey === 'interview' ? 'hover-card' : ''}}">
+          <view class="entry-icon">🎯</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">企业面试题库</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">名企真题，校招必备</text>
+          </view>
+        </view>
+        <view class="entry-card entry-card-grid tone-purple {{pressedKey === 'custom' ? 'hover-card' : ''}}">
+          <view class="featured-badge">
+            <text class="featured-badge-spark">✦</text>
+            <text class="featured-badge-text">核心功能</text>
+          </view>
+          <view class="entry-icon">📚</view>
+          <view class="entry-info">
+            <view class="entry-title-row">
+              <text class="entry-title">自主题库</text>
+              <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+            </view>
+            <text class="entry-desc">{{customCountText}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="entry-card entry-card-wide tone-violet {{pressedKey === 'review' ? 'hover-card' : ''}}">
+        <view class="entry-icon">🔁</view>
+        <view class="entry-info">
+          <text class="entry-title">专项复习</text>
+          <text class="entry-desc">错题本 / 收藏夹，针对性提升</text>
+        </view>
+        <view class="entry-chev"><text class="entry-chev-icon">›</text></view>
+      </view>
+    </view>
+
+    <!-- 深色层同步：每日一言（纯视觉） -->
+    <view class="daily-quote">
+      <view class="dq-art">
+        <image class="dq-scene dq-scene-day" src="/images/dq-scene.png" mode="scaleToFill" />
+        <image class="dq-scene dq-scene-night" src="/images/dq-scene-night.png" mode="scaleToFill" />
+        <view class="dq-glow"></view>
+        <view class="dq-sun"></view>
+        <view class="dq-cloud dq-cloud-1"></view>
+        <view class="dq-cloud dq-cloud-2"></view>
+        <view class="dq-cloud dq-cloud-3"></view>
+        <view class="dq-bird dq-bird-1"></view>
+        <view class="dq-bird dq-bird-2"></view>
+        <view class="dq-bird dq-bird-3"></view>
+        <view class="dq-bird dq-bird-4"></view>
+        <view class="dq-star dq-star-1"></view>
+        <view class="dq-star dq-star-2"></view>
+        <view class="dq-star dq-star-3"></view>
+        <view class="dq-star dq-star-4"></view>
+      </view>
+      <view class="daily-quote-head">
+        <text class="daily-quote-quote">“</text>
+        <text class="daily-quote-label">每日一言</text>
+        <text class="daily-quote-date">{{todayText}}</text>
+      </view>
+      <text class="daily-quote-text">{{dailyQuote}}</text>
+    </view>
+
+    <!-- 深色层同步：新手引导入口（纯视觉，点击穿透到底层） -->
+    <view wx:if="{{showOnboardingRecallEntry}}" class="contact-entry ob-recall-entry ob-recall-inline">
+      <text class="contact-entry-deco">✦</text>
+      <text class="contact-entry-text">新手引导</text>
+      <text class="contact-entry-deco">✦</text>
+    </view>
+
+    <view class="home-footer">
+      <view class="footer-divider">
+        <view class="footer-divider-line"></view>
+        <view class="footer-divider-ring"></view>
+        <view class="footer-divider-line"></view>
+      </view>
+      <text class="footer-text">粤ICP备2026147363号-1X</text>
+    </view>
+
+  </view>
+
+  <!-- ========== 圆形展开过渡遮罩（页面跳转） ========== -->
+  <view class="reveal-overlay {{revealing ? 'active' : ''}}"
+        style="left: {{revealX}}px; top: {{revealY}}px;"></view>
+
+</view>
+
+<!-- ========== 使用说明弹窗 ========== -->
+<view wx:if="{{guideVisible}}" class="guide-mask {{guideClosing ? 'closing' : ''}} {{darkMode ? 'dark' : ''}}"
+      catchtap="onCloseGuide" catchtouchmove="onGuideNoop">
+  <view class="guide-card {{guideClosing ? 'closing' : ''}}" catchtap="onGuideNoop">
+
+    <!-- 头部：品牌渐变光域 + 圆环 + 星火 -->
+    <view class="guide-head">
+      <view class="guide-head-orb guide-head-orb-a"></view>
+      <view class="guide-head-orb guide-head-orb-b"></view>
+      <view class="guide-head-ring">
+        <view class="guide-head-ring-dot"></view>
+      </view>
+      <text class="guide-head-spark guide-head-spark-1">✦</text>
+      <text class="guide-head-spark guide-head-spark-2">✦</text>
+      <text class="guide-head-spark guide-head-spark-3">•</text>
+      <text class="guide-head-brand">FQ</text>
+      <text class="guide-head-label">FlashQ · 官方指南</text>
+    </view>
+
+    <!-- 悬浮图标徽章 -->
+    <view class="guide-badge">
+      <view class="guide-badge-inner"></view>
+      <text class="guide-badge-icon">📖</text>
+      <view class="guide-badge-tail"></view>
+    </view>
+
+    <view class="guide-body">
+      <text class="guide-title">使用说明</text>
+      <text class="guide-desc">完整功能介绍与常见问题</text>
+      <text class="guide-desc">详见官方网址</text>
+
+      <!-- 网址卡片（点击即复制） -->
+      <view class="guide-site {{guideCopied ? 'done' : ''}}" catchtap="onCopySite">
+        <view class="guide-site-icon">
+          <text class="guide-site-icon-text">{{guideCopied ? '✓' : '🌐'}}</text>
+        </view>
+        <view class="guide-site-info">
+          <text class="guide-site-label">官方网站</text>
+          <text class="guide-site-url">flashq.site</text>
+        </view>
+        <view class="guide-site-action">
+          <text class="guide-site-action-text">{{guideCopied ? '已复制' : '复制'}}</text>
+        </view>
+      </view>
+
+      <!-- 一键复制主按钮 -->
+      <view class="guide-copy-btn {{guideCopied ? 'done' : ''}}" hover-class="guide-copy-btn-hover"
+            hover-stay-time="80" catchtap="onCopySite">
+        <text class="guide-copy-btn-icon">{{guideCopied ? '✓' : '⧉'}}</text>
+        <text class="guide-copy-btn-text">{{guideCopied ? '已复制到剪贴板' : '一键复制网址'}}</text>
+        <view class="guide-copy-btn-shine"></view>
+      </view>
+
+      <text class="guide-tip">粘贴到浏览器地址栏即可打开 · 建议收藏</text>
+    </view>
+
+    <!-- 关闭按钮 -->
+    <view class="guide-close" catchtap="onCloseGuide">
+      <text class="guide-close-icon">✕</text>
+    </view>
+  </view>
+</view>
+
+<!-- ============================================================
+     新手引导 · 递进式分步气泡 + 高亮 spotlight + 召回面板
+     设计要点：
+     - 每次只显示一个气泡，文案来自 utils/onboarding.js
+     - 高亮目标通过 box-shadow 投射巨大暗影，制造「聚光镂空」效果
+     - 召回入口（顶部「新手引导」字样）随时可重启或续接引导
+     ============================================================ -->
+
+<!-- ① 全屏蒙层（透明，仅用于拦截非高亮区的点击） -->
+<view wx:if="{{onboardingStep}}"
+      class="ob-mask {{onboardingClosing ? 'closing' : ''}} {{darkMode ? 'dark' : ''}}"
+      catchtap="onOnboardingNoop" catchtouchmove="onOnboardingNoop">
+
+  <!-- ② Spotlight 镂空层：通过 box-shadow 投射暗影制造「挖洞」效果 -->
+  <view wx:if="{{onboardingSpotlight}}"
+        class="ob-spotlight"
+        style="left:{{onboardingSpotlight.left}}px;top:{{onboardingSpotlight.top}}px;width:{{onboardingSpotlight.width}}px;height:{{onboardingSpotlight.height}}px;"
+        catchtap="onOnboardingTargetTap">
+  </view>
+
+  <!-- ③ 单步气泡：居中（target=null）或贴在高亮目标附近（动态上/下方） -->
+  <view class="ob-bubble-wrap {{onboardingSpotlight ? 'with-target with-target-' + onboardingBubblePlacement : 'centered'}}">
+    <view class="ob-bubble">
+
+      <!-- 头部：步骤号 + 图标 + 进度 -->
+      <view class="ob-bubble-head">
+        <view class="ob-bubble-orb ob-bubble-orb-a"></view>
+        <view class="ob-bubble-orb ob-bubble-orb-b"></view>
+        <text class="ob-bubble-step">{{onboardingStepIndex + 1}} / {{onboardingTotal}}</text>
+        <text class="ob-bubble-icon">{{onboardingStep.icon}}</text>
+      </view>
+
+      <!-- 主体：标题 / 描述 / 操作预期 -->
+      <text class="ob-bubble-title">{{onboardingStep.title}}</text>
+      <text class="ob-bubble-desc">{{onboardingStep.desc}}</text>
+      <view wx:if="{{onboardingStep.expectation}}" class="ob-bubble-expect">
+        <text class="ob-bubble-expect-icon">→</text>
+        <text class="ob-bubble-expect-text">{{onboardingStep.expectation}}</text>
+      </view>
+
+      <!-- 进度条 -->
+      <view class="ob-bubble-progress">
+        <view class="ob-bubble-progress-bar" style="width:{{(onboardingStepIndex + 1) * 100 / onboardingTotal}}%;"></view>
+      </view>
+
+      <!-- 操作区：主按钮 + 可选次按钮 -->
+      <view class="ob-bubble-actions">
+        <text wx:if="{{onboardingStep.secondaryText}}"
+              class="ob-bubble-secondary"
+              catchtap="onOnboardingSecondary">{{onboardingStep.secondaryText}}</text>
+        <view class="ob-bubble-primary" catchtap="onOnboardingPrimary">{{onboardingStep.primaryText}}</view>
+      </view>
+
+    </view>
+  </view>
+
+</view>
+
+<!-- ============================================================
+     新手引导 · 召回面板（顶部「新手引导」入口被点击时打开）
+     展示所有步骤、当前进度，提供「从断点继续」「重新开始」两个动作
+     ============================================================ -->
+<view wx:if="{{onboardingRecallVisible}}"
+      class="ob-recall-mask {{darkMode ? 'dark' : ''}}"
+      catchtap="onOnboardingRecallClose" catchtouchmove="onOnboardingNoop">
+  <view class="ob-recall-panel" catchtap="onOnboardingNoop">
+
+    <view class="ob-recall-head">
+      <view class="ob-recall-head-orb ob-recall-head-orb-a"></view>
+      <view class="ob-recall-head-orb ob-recall-head-orb-b"></view>
+      <text class="ob-recall-head-icon">🧭</text>
+      <text class="ob-recall-head-title">新手引导</text>
+      <text class="ob-recall-head-sub">5 步走完，掌握自主题库核心玩法</text>
+    </view>
+
+    <view class="ob-recall-body">
+      <!-- 进度条 -->
+      <view class="ob-recall-progress">
+        <view class="ob-recall-progress-bar"
+              style="width:{{onboardingRecallProgress.percent}}%;"></view>
+      </view>
+      <view class="ob-recall-progress-text">
+        <text>已完成 {{onboardingRecallProgress.current}} / {{onboardingRecallProgress.total}} 步</text>
+        <text wx:if="{{onboardingRecallProgress.skipped}}" class="ob-recall-progress-tag skipped">已跳过</text>
+        <text wx:elif="{{onboardingRecallProgress.finished}}" class="ob-recall-progress-tag done">已完成</text>
+      </view>
+
+      <!-- 步骤列表 -->
+      <view class="ob-recall-list">
+        <view wx:for="{{onboardingRecallSteps}}" wx:key="id"
+              class="ob-recall-item {{onboardingRecallCompleted.indexOf(item.id) >= 0 ? 'done' : ''}}">
+          <text class="ob-recall-item-icon">{{item.icon}}</text>
+          <view class="ob-recall-item-info">
+            <text class="ob-recall-item-title">{{item.title}}</text>
+            <text class="ob-recall-item-desc">{{item.desc}}</text>
+          </view>
+          <text class="ob-recall-item-state">{{onboardingRecallCompleted.indexOf(item.id) >= 0 ? '✓' : '○'}}</text>
+        </view>
+      </view>
+
+      <!-- 动作按钮 -->
+      <view class="ob-recall-actions">
+        <view class="ob-recall-btn-secondary" catchtap="onOnboardingRecallResume">从断点继续</view>
+        <view class="ob-recall-btn-primary" catchtap="onOnboardingRecallRestart">重新开始</view>
+      </view>
+      <text class="ob-recall-tip" catchtap="onOnboardingRecallClose">关闭</text>
+    </view>
+  </view>
+</view>
+
+<!-- ============================================================
+     游客模式升级提示 · 已刷 X 题，登录可永久保留
+     ============================================================ -->
+<view wx:if="{{guestUpgradeVisible}}"
+      class="guest-mask {{darkMode ? 'dark' : ''}}"
+      catchtap="onCloseGuestUpgrade">
+  <view class="guest-card" catchtap="onOnboardingNoop" catchtouchmove="onOnboardingNoop">
+    <view class="guest-close" catchtap="onCloseGuestUpgrade">
+      <text class="guest-close-icon">✕</text>
+    </view>
+
+    <!-- 头部品牌渐变光域 -->
+    <view class="guest-head">
+      <view class="guest-head-orb guest-head-orb-a"></view>
+      <view class="guest-head-orb guest-head-orb-b"></view>
+      <view class="guest-head-ring"></view>
+      <view class="guest-head-ring-dot"></view>
+      <text class="guest-head-spark guest-head-spark-1">✦</text>
+      <text class="guest-head-spark guest-head-spark-2">✦</text>
+      <text class="guest-head-spark guest-head-spark-3">•</text>
+      <view class="guest-head-count">
+        <text class="guest-head-num">{{guestAnswerCount}}</text>
+        <text class="guest-head-unit">题</text>
+      </view>
+    </view>
+
+    <view class="guest-body">
+      <text class="guest-title">你已经刷了 {{guestAnswerCount}} 题</text>
+      <text class="guest-desc">登录后可永久保留进度，错题本、收藏夹云端同步，换设备也不丢。</text>
+
+      <view class="guest-features">
+        <view class="guest-feature">
+          <text class="guest-feature-icon">☁️</text>
+          <text class="guest-feature-text">云端同步</text>
+        </view>
+        <view class="guest-feature-divider"></view>
+        <view class="guest-feature">
+          <text class="guest-feature-icon">📊</text>
+          <text class="guest-feature-text">永久记录</text>
+        </view>
+        <view class="guest-feature-divider"></view>
+        <view class="guest-feature">
+          <text class="guest-feature-icon">🏆</text>
+          <text class="guest-feature-text">参与排行</text>
+        </view>
+      </view>
+
+      <view class="guest-login-btn" catchtap="onGuestUpgradeLogin" hover-class="guest-btn-hover" hover-stay-time="80">
+        <text class="guest-login-icon">💬</text>
+        <text class="guest-login-text">微信一键登录</text>
+        <view class="guest-login-shine"></view>
+      </view>
+
+      <text class="guest-tip" catchtap="onCloseGuestUpgrade">下次再说</text>
+    </view>
+  </view>
+</view>

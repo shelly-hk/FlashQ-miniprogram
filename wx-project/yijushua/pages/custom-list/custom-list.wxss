@@ -1,0 +1,1108 @@
+/**
+ * 自主题库列表页样式
+ * --------------------------------------------------
+ */
+
+.custom-list-page {
+  /* 蒂芙尼蓝主题（局部覆盖） */
+  --color-bg: #E8F6F5;
+  --color-card: #FFFFFF;
+  --color-border: #C8E6E4;
+  --color-primary: #0ABAB5;
+  --color-text: #2D3A3A;
+  --color-text-secondary: #4A6863;
+  --color-text-hint: #6B9F9C;
+  --shadow-card: 0 4rpx 16rpx rgba(10, 186, 181, 0.08);
+
+  /* 细腻渐变背景 */
+  background:
+    radial-gradient(85% 40% at 50% -8%, rgba(255, 255, 255, 0.5) 0%, transparent 62%),
+    linear-gradient(180deg, #EDF8F7 0%, #E8F6F5 45%, #E4F3F1 100%);
+}
+
+/* ========== 整页容器 ==========
+   不再锁死 height:100vh，也不在 view 上做 overflow 滚动
+   （小程序普通 view 无法可靠地作为滚动容器）。
+   改由内容自然撑开高度、交给 page 本身滚动。
+   【深色模式整页无法操作的根因】
+   原本两层都是 absolute + overflow-y:auto，各自是独立滚动容器：
+   深色模式下用户看见的是深色层（z-index:2），而深色层的 scrollTop 永远是 0，
+   手指滑动只滚动了看不见的浅色层 —— 页面看起来完全卡住，
+   列表下方内容与底部翻页按钮永远够不到。
+   浅色模式深色层不渲染，所以只有深色模式犯病。 */
+.cl-container {
+  position: relative;
+  min-height: 100vh;
+  background: #E8F6F5;
+}
+
+/* ========== 双层通用布局 ========== */
+.custom-list-page.theme-layer {
+  padding: 24rpx;
+  padding-bottom: 48rpx;
+  box-sizing: border-box;
+}
+
+/* 浅色层：保持正常文档流。
+   绝对定位元素不参与父容器的滚动高度计算，必须由这一层真实撑开容器高度，
+   长列表才能滚动查看。 */
+.custom-list-page.light-layer {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+/* 深色层（clip-path 圆形裁切，纯视觉层，常驻 DOM）
+   绝对定位覆盖在浅色层上；不写 bottom:0，高度由自身内容撑开（min-height 一屏），
+   与浅色层等高，随 page 一起滚动，视觉位置与可点击位置始终同步。 */
+.custom-list-page.dark-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  min-height: 100vh;
+  transition: clip-path 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              -webkit-clip-path 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  pointer-events: none;
+}
+
+/* 钉动画起点用：无过渡地把圆形圆心移到触摸点（与刷题页一致） */
+.custom-list-page.dark-layer.no-transition {
+  transition: none !important;
+}
+
+/* ========== BGM 开关按钮（音符） ==========
+   fixed：容器高度由内容撑开后页面会滚动，按钮需常驻右上角 */
+.bgm-toggle-btn {
+  position: fixed;
+  top: 24rpx;
+  right: 116rpx;
+  z-index: 100;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+/* 深色模式：浅色半透明圆底 + 亮描边（与右侧主题按钮的夜间观感一致），
+   避免深色页面上按钮糊成一片 */
+.bgm-toggle-btn.night {
+  background: rgba(232, 232, 240, 0.16);
+  border: 2rpx solid rgba(232, 232, 240, 0.4);
+}
+
+/* 开启时变为深色，代表正在播放 BGM */
+.bgm-toggle-btn.on {
+  background: rgba(26, 26, 46, 0.85);
+  box-shadow: 0 4rpx 16rpx rgba(26, 26, 46, 0.3);
+}
+
+/* 深色模式开启态：琥珀色描边 + 光晕，明确"正在播放" */
+.bgm-toggle-btn.night.on {
+  border-color: rgba(255, 209, 102, 0.6);
+  box-shadow: 0 0 20rpx rgba(255, 183, 77, 0.35), 0 4rpx 16rpx rgba(26, 26, 46, 0.4);
+}
+
+/* 音符图标：日间深琥珀 / 深色模式亮琥珀，两种模式下都清晰可见
+   （原 🎵 emoji 未设显式颜色，部分设备渲染为深色字形，深色模式下看不清） */
+.bgm-toggle-icon {
+  font-size: 40rpx;
+  font-weight: 600;
+  line-height: 1;
+  color: #C77800;
+}
+
+.bgm-toggle-btn.night .bgm-toggle-icon {
+  color: #FFB74D;
+}
+
+.bgm-toggle-btn.on .bgm-toggle-icon {
+  color: #FFD166;
+  animation: bgmSpin 3s linear infinite;
+}
+
+@keyframes bgmSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ========== 唱片杆（唱臂）==========
+   与首页 home.wxss 完全一致：
+   唱片圆心 = 距右 152rpx / 距顶 60rpx（按钮 right:116 + 半径36、top:24 + 半径36）
+   支点圆心 = 唱片正上方「距右 152rpx / 距顶 10rpx」，杆长 50rpx
+   —— 停止态 rotate(62deg)：整根杆离唱片边缘最近 44.1rpx > 半径 36(+2rpx 描边)，明显抬离唱片；
+      抬向左侧（页面内侧），避开右侧的主题切换按钮（本页 right:32，占 32~104rpx）
+   —— 播放态 rotate(-34deg)：唱头落在距圆心 29rpx 处（约 0.8R，唱片的纹路上），最右侧约 118rpx
+   只在 .bgm-arm 上写 transform，内部零件随容器一起转，不额外叠加旋转 */
+.bgm-arm {
+  position: fixed;
+  top: 0rpx;                /* 支点圆心 = 此处 + 10rpx，与按钮 top:24 配套（圆心 60 - 杆长 50） */
+  right: 142rpx;            /* 142 + 10(支点半径) = 152，与唱片圆心同一条竖线 */
+  z-index: 101;             /* 高于唱片按钮(100)，唱臂压在唱片之上 */
+  width: 20rpx;
+  height: 60rpx;
+  transform-origin: 10rpx 10rpx;   /* 支点圆心 */
+  transform: rotate(62deg);        /* 默认：抬起 */
+  transition: transform 0.55s cubic-bezier(0.32, 1.24, 0.58, 1);
+}
+
+/* 播放：唱臂落下 */
+.bgm-arm.on {
+  transform: rotate(-34deg);
+}
+
+/* 配重（支点后端的配重块，随杆一起转） */
+.bgm-arm-weight {
+  position: absolute;
+  left: 6rpx;
+  top: 1rpx;
+  width: 8rpx;
+  height: 10rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(90deg, #B9BFCE 0%, #F2F4F8 45%, #8F95A8 100%);
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.25);
+}
+
+/* 杆身：金属渐变，浅色/深色背景下都能看清 */
+.bgm-arm-rod {
+  position: absolute;
+  left: 7rpx;
+  top: 10rpx;
+  width: 6rpx;
+  height: 44rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(90deg, #C9CEDB 0%, #F5F7FA 40%, #A6ACBD 100%);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.28);
+}
+
+/* 唱头（搭在唱片上的那一头） */
+.bgm-arm-head {
+  position: absolute;
+  left: 4rpx;
+  top: 46rpx;
+  width: 12rpx;
+  height: 14rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(180deg, #E9ECF4 0%, #8E94A8 100%);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.32);
+}
+
+/* 支点转轴 */
+.bgm-arm-pivot {
+  position: absolute;
+  left: 3rpx;
+  top: 3rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #D7DBE6 45%, #8F95A8 100%);
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 播放态：唱头带一点琥珀色光晕，和唱片的琥珀描边呼应 */
+.bgm-arm.on .bgm-arm-head {
+  background: linear-gradient(180deg, #FFE1A6 0%, #E0A63C 100%);
+  box-shadow: 0 0 8rpx rgba(255, 183, 77, 0.55), 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 深色模式：唱臂整体调暗一档并保留金属高光，避免杆子在深底上过于刺眼 */
+.bgm-arm.night .bgm-arm-weight {
+  background: linear-gradient(90deg, #5F657A 0%, #BFC4D2 45%, #4E5468 100%);
+}
+.bgm-arm.night .bgm-arm-rod {
+  background: linear-gradient(90deg, #6E7488 0%, #C7CCDA 40%, #565C70 100%);
+}
+.bgm-arm.night .bgm-arm-head {
+  background: linear-gradient(180deg, #C3C8D6 0%, #6C7286 100%);
+}
+.bgm-arm.night .bgm-arm-pivot {
+  background: radial-gradient(circle at 35% 30%, #E8EAF2 0%, #A9AFC0 45%, #5C6276 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ========== 深色模式切换按钮 ==========
+   fixed：与 BGM 按钮同理，页面滚动时保持常驻右上角 */
+.theme-toggle-btn {
+  position: fixed;
+  top: 24rpx;
+  right: 32rpx;
+  z-index: 100;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+}
+
+.theme-icon {
+  font-size: 36rpx;
+}
+
+/* ========== 深色模式 ========== */
+.custom-list-page.dark {
+  --color-bg: #1A2628;
+  --color-card: #243335;
+  --color-border: #364A4D;
+  --color-primary: #2BC8C4;
+  --color-text: #E0EDED;
+  --color-text-secondary: #A8C0BD;
+  --color-text-hint: #6B9F9C;
+  --shadow-card: 0 4rpx 16rpx rgba(0, 0, 0, 0.2);
+  /* 深色背景渐变：覆盖日间渐变（双层结构共享此类，必须显式覆盖） */
+  background: linear-gradient(180deg, #1E2C2E 0%, #1A2628 45%, #162122 100%);
+}
+
+/* 深色模式：磨玻璃与柔化控件适配 */
+.custom-list-page.dark .batch-bar {
+  background: rgba(26, 38, 40, 0.9);
+}
+
+.custom-list-page.dark .empty-icon {
+  background: linear-gradient(135deg, #2A3A3C 0%, #223032 100%);
+  box-shadow: inset 0 2rpx 4rpx rgba(255, 255, 255, 0.05);
+}
+
+.custom-list-page.dark .fav-btn,
+.custom-list-page.dark .category-btn {
+  background: rgba(43, 200, 196, 0.08);
+  border-color: rgba(43, 200, 196, 0.35);
+}
+
+.custom-list-page.dark .fav-btn.fav-active {
+  background: rgba(245, 166, 35, 0.1);
+}
+
+.custom-list-page.dark .delete-btn {
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.custom-list-page.dark .upload-btn {
+  background: #243335;
+}
+
+.custom-list-page.dark .manage-top-bar {
+  background: #243335;
+}
+
+/* ========== 分类筛选栏（展开/收起） ========== */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 20rpx 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: var(--shadow-card);
+}
+
+.filter-label {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.filter-arrow {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  transform: rotate(90deg);
+  transition: transform 0.25s;
+}
+
+.filter-arrow.arrow-up {
+  transform: rotate(-90deg);
+}
+
+/* 分类筛选面板：flex 自动换行，所有分类 + 加号不会超出右上角圆框遮挡区 */
+.filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 28rpx;
+  margin-bottom: 16rpx;
+  box-shadow: var(--shadow-card);
+  animation: filterSlideDown 0.3s ease;
+}
+
+@keyframes filterSlideDown {
+  from { opacity: 0; transform: translateY(-10rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.filter-pill {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  padding: 14rpx 28rpx;
+  border-radius: 32rpx;
+  border: 2rpx solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.filter-pill.pill-active {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+/* 添加分类按钮 */
+.filter-pill.filter-add {
+  color: var(--color-primary);
+  border-style: dashed;
+  border-color: var(--color-primary);
+  background: var(--color-card);
+}
+
+/* 分类长按提示 */
+.category-tip {
+  font-size: calc(22rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  padding: 0 8rpx 16rpx;
+  opacity: 0.7;
+}
+
+/* ========== 顶部操作栏 ========== */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+/* 管理模式固定顶栏 */
+.manage-top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-card);
+  padding: 16rpx 24rpx;
+  margin: -24rpx -24rpx 16rpx -24rpx;
+  border-bottom: 2rpx solid var(--color-border);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.manage-top-info {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.manage-cancel-btn {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-danger);
+  padding: 8rpx 32rpx;
+  border: 2rpx solid var(--color-danger);
+  border-radius: 32rpx;
+}
+
+.manage-select-all-btn {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  padding: 8rpx 28rpx;
+}
+
+.total-info {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.upload-btn {
+  background: var(--color-card);
+  color: var(--color-primary);
+  font-size: calc(28rpx * var(--font-scale, 1));
+  font-weight: 500;
+  padding: 16rpx 36rpx;
+  border-radius: 32rpx;
+  border: 2rpx solid rgba(10, 186, 181, 0.4);
+}
+
+.practice-btn {
+  background: linear-gradient(135deg, #14CFC9 0%, #0AA8A3 100%);
+  color: #ffffff;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  font-weight: 600;
+  padding: 16rpx 36rpx;
+  border-radius: 32rpx;
+  box-shadow: 0 6rpx 18rpx rgba(10, 168, 163, 0.35);
+}
+
+/* ========== 空状态 ========== */
+.empty-state {
+  text-align: center;
+  padding: 110rpx 0;
+}
+
+.empty-icon {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFFFFF 0%, #E3F2F1 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 84rpx;
+  margin-bottom: 28rpx;
+  box-shadow: inset 0 2rpx 4rpx rgba(255, 255, 255, 0.9), 0 10rpx 28rpx rgba(10, 186, 181, 0.14);
+}
+
+.empty-text {
+  display: block;
+  font-size: calc(32rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  margin-bottom: 8rpx;
+}
+
+.empty-hint {
+  display: block;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  margin-bottom: 32rpx;
+}
+
+.empty-btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #14CFC9 0%, #0AA8A3 100%);
+  color: #ffffff;
+  font-size: calc(30rpx * var(--font-scale, 1));
+  font-weight: 500;
+  padding: 20rpx 56rpx;
+  border-radius: 48rpx;
+  box-shadow: 0 8rpx 24rpx rgba(10, 168, 163, 0.3);
+}
+
+/* ========== 题目列表 ========== */
+.question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.question-item {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 28rpx;
+  box-shadow: 0 6rpx 24rpx rgba(10, 186, 181, 0.08);
+  border: 1rpx solid rgba(10, 186, 181, 0.14);
+}
+
+/* ========== 标签行 ========== */
+.item-tags {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.item-tags-right {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.item-fav-badge {
+  font-size: 22rpx;
+  color: #f5a623;
+  background: rgba(245, 166, 35, 0.1);
+  padding: 4rpx 14rpx;
+  border-radius: 8rpx;
+}
+
+.item-category {
+  font-size: calc(22rpx * var(--font-scale, 1));
+  padding: 4rpx 16rpx;
+  border-radius: 16rpx;
+  background: rgba(10, 186, 181, 0.1);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.item-source {
+  display: flex;
+  align-items: center;
+  background: rgba(10, 186, 181, 0.08);
+  border-radius: 20rpx;
+  padding: 4rpx 16rpx;
+}
+
+.source-icon {
+  font-size: 20rpx;
+  margin-right: 6rpx;
+}
+
+.source-name {
+  font-size: calc(20rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  max-width: 300rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-difficulty {
+  font-size: calc(22rpx * var(--font-scale, 1));
+  padding: 4rpx 16rpx;
+  border-radius: 16rpx;
+  font-weight: 500;
+}
+
+.difficulty-1 {
+  background: #e7f8ee;
+  color: var(--color-success);
+}
+
+.difficulty-2 {
+  background: #fff7e6;
+  color: var(--color-warning);
+}
+
+.difficulty-3 {
+  background: #fff0f0;
+  color: var(--color-danger);
+}
+
+/* ========== 题干 ========== */
+.item-content {
+  font-size: calc(32rpx * var(--font-scale, 1));
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin-bottom: 20rpx;
+}
+
+/* ========== 选项 ========== */
+.item-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.item-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  padding: 12rpx 16rpx;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.item-opt-correct {
+  background: #e7f8ee;
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+.opt-correct-tag {
+  font-size: 20rpx;
+  background: var(--color-success);
+  color: #ffffff;
+  padding: 2rpx 12rpx;
+  border-radius: 12rpx;
+}
+
+/* ========== 解析 ========== */
+.item-explanation {
+  margin-top: 16rpx;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+  line-height: 1.5;
+  padding-left: 16rpx;
+  border-left: 4rpx solid var(--color-border);
+}
+
+/* ========== 操作行 ========== */
+.item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid var(--color-border);
+}
+
+.item-time {
+  font-size: calc(22rpx * var(--font-scale, 1));
+  color: var(--color-text-hint);
+}
+
+.item-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.fav-btn {
+  font-size: calc(24rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(10, 186, 181, 0.4);
+  background: rgba(10, 186, 181, 0.05);
+}
+
+.fav-btn.fav-active {
+  color: #D98A0B;
+  border-color: rgba(245, 166, 35, 0.5);
+  background: rgba(245, 166, 35, 0.1);
+}
+
+.category-btn {
+  font-size: 24rpx;
+  color: var(--color-primary);
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(10, 186, 181, 0.4);
+  background: rgba(10, 186, 181, 0.05);
+}
+
+.item-fav-tag {
+  font-size: 24rpx;
+  color: #f5a623;
+  background: rgba(245, 166, 35, 0.1);
+  padding: 4rpx 16rpx;
+  border-radius: 12rpx;
+}
+
+.delete-btn {
+  font-size: 24rpx;
+  color: var(--color-danger);
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  border: 2rpx solid rgba(238, 10, 36, 0.35);
+  background: rgba(238, 10, 36, 0.05);
+}
+
+/* ========== 加载状态 ========== */
+.loading-more {
+  text-align: center;
+  padding: 32rpx;
+  font-size: 26rpx;
+  color: var(--color-text-hint);
+}
+
+/* ========== 分页控制栏 ========== */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32rpx;
+  padding: 32rpx 0 48rpx;
+}
+
+.page-btn {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--color-primary);
+  background: var(--color-card);
+  padding: 16rpx 48rpx;
+  border-radius: 32rpx;
+  border: 2rpx solid var(--color-primary);
+  font-weight: 500;
+}
+
+.page-btn.page-btn-disabled {
+  color: var(--color-text-hint);
+  border-color: var(--color-border);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.page-info {
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* ========== 管理模式 ========== */
+.manage-btn {
+  font-size: 26rpx;
+  color: var(--color-primary);
+  padding: 10rpx 28rpx;
+  border-radius: 24rpx;
+  border: 2rpx solid var(--color-primary);
+}
+
+/* 管理模式下隐藏单条操作按钮 */
+.question-list.manage-active .item-actions {
+  display: none;
+}
+
+/* 题目项添加 flex 布局以容纳选择指示器 */
+.question-list.manage-active .question-item {
+  position: relative;
+}
+
+.question-item.item-selected {
+  border-color: var(--color-primary);
+  background: rgba(10, 186, 181, 0.06);
+}
+
+/* 选择指示器 */
+.select-indicator {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  border: 4rpx solid #cccccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  margin-bottom: 16rpx;
+  transition: all 0.2s;
+}
+
+.select-indicator.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.check-icon {
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+/* ========== 批量操作栏 ========== */
+.batch-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 32rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(30rpx) saturate(180%);
+  -webkit-backdrop-filter: blur(30rpx) saturate(180%);
+  border-top: 1rpx solid var(--color-border);
+  box-shadow: 0 -4rpx 24rpx rgba(10, 186, 181, 0.1);
+  z-index: 100;
+}
+
+.batch-info {
+  font-size: 24rpx;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.batch-select-all {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  margin-left: 4rpx;
+}
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.batch-btn {
+  font-size: 28rpx;
+  padding: 8rpx 28rpx;
+  border-radius: 32rpx;
+  font-weight: 500;
+}
+
+.batch-fav {
+  color: #f5a623;
+  border: 2rpx solid #f5a623;
+}
+
+.batch-assign {
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+}
+
+.batch-delete {
+  color: #ffffff;
+  background: linear-gradient(135deg, #FF6B7A 0%, #EE0A24 100%);
+  border: 2rpx solid transparent;
+  box-shadow: 0 4rpx 14rpx rgba(238, 10, 36, 0.25);
+}
+
+.batch-btn.btn-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ============================================================
+   新手引导蒙层（custom-list 页承接 custom-upload / custom-practice）
+   ------------------------------------------------------------
+   - 独立 overlay，z-index 高于双层主题
+   - mask 视觉透明，让 spotlight 内部能看到真实按钮
+   - Spotlight 镂空高亮「去上传」或「开始刷题」按钮
+   - 气泡根据 spotlight 位置动态放置在上方或下方
+   ============================================================ */
+
+.ob-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3000;            /* 高于双层主题与批量操作栏 */
+  /* 视觉透明，让 spotlight 内部能看到真实按钮；
+     mask 自身仍接收点击（catchtap="onOnboardingNoop"）防止引导期间误操作 */
+  background: transparent;
+  animation: obMaskIn 0.3s ease forwards;
+  overflow: hidden;
+}
+.ob-mask.closing {
+  animation: obMaskOut 0.26s ease forwards;
+}
+@keyframes obMaskIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes obMaskOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Spotlight 镂空层 */
+.ob-spotlight {
+  position: absolute;
+  border-radius: 16rpx;
+  background: transparent;
+  /* 巨大 box-shadow 制造镂空：矩形之外全暗 */
+  box-shadow: 0 0 0 9999rpx rgba(8, 18, 30, 0.78);
+  border: 4rpx solid rgba(255, 213, 79, 0.9);
+  animation: obSpotlightPulse 1.8s ease-in-out infinite;
+  z-index: 3001;
+}
+@keyframes obSpotlightPulse {
+  0%, 100% {
+    border-color: rgba(255, 213, 79, 0.9);
+    box-shadow: 0 0 0 9999rpx rgba(8, 18, 30, 0.78),
+                0 0 0 0 rgba(255, 213, 79, 0);
+  }
+  50% {
+    border-color: rgba(255, 213, 79, 1);
+    box-shadow: 0 0 0 9999rpx rgba(8, 18, 30, 0.78),
+                0 0 32rpx 8rpx rgba(255, 213, 79, 0.55);
+  }
+}
+
+/* 气泡容器 */
+.ob-bubble-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 3002;
+  padding: 0 40rpx;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;   /* 让点击穿透到 spotlight 与蒙层 */
+}
+.ob-bubble-wrap.with-target-bottom {
+  bottom: 88rpx;
+  bottom: calc(88rpx + env(safe-area-inset-bottom));
+  top: auto;
+}
+.ob-bubble-wrap.with-target-top {
+  top: 88rpx;
+  top: calc(88rpx + env(safe-area-inset-top));
+  bottom: auto;
+}
+
+/* 气泡卡片 */
+.ob-bubble {
+  position: relative;
+  width: 100%;
+  max-width: 600rpx;
+  border-radius: 32rpx;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F6FAFF 100%);
+  box-shadow: 0 28rpx 68rpx rgba(21, 101, 192, 0.45),
+              0 8rpx 22rpx rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  pointer-events: auto;
+  animation: obBubbleIn 0.42s cubic-bezier(0.34, 1.42, 0.64, 1) backwards;
+}
+.ob-mask.closing .ob-bubble {
+  animation: obBubbleOut 0.26s ease forwards;
+}
+@keyframes obBubbleIn {
+  from { opacity: 0; transform: translateY(40rpx) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes obBubbleOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(20rpx) scale(0.94); }
+}
+
+/* 头部 */
+.ob-bubble-head {
+  position: relative;
+  height: 132rpx;
+  background: linear-gradient(135deg, #5AB8F5 0%, #1E88E5 55%, #1565C0 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 36rpx;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.ob-bubble-orb {
+  position: absolute;
+  border-radius: 50%;
+}
+.ob-bubble-orb-a {
+  top: -80rpx;
+  left: -40rpx;
+  width: 200rpx;
+  height: 200rpx;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.36) 0%, transparent 68%);
+}
+.ob-bubble-orb-b {
+  bottom: -50rpx;
+  right: -20rpx;
+  width: 140rpx;
+  height: 140rpx;
+  background: radial-gradient(circle, rgba(255, 213, 79, 0.30) 0%, transparent 70%);
+}
+.ob-bubble-step {
+  position: relative;
+  z-index: 1;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.88);
+  letter-spacing: 2rpx;
+}
+.ob-bubble-icon {
+  position: relative;
+  z-index: 1;
+  font-size: 56rpx;
+  line-height: 1;
+}
+
+/* 主体文字 */
+.ob-bubble-title {
+  display: block;
+  padding: 32rpx 36rpx 12rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--color-text, #1A2628);
+  letter-spacing: 1rpx;
+}
+.ob-bubble-desc {
+  display: block;
+  padding: 0 36rpx 16rpx;
+  font-size: 26rpx;
+  color: var(--color-text-hint, #6B7B8C);
+  line-height: 1.6;
+  letter-spacing: 0.5rpx;
+}
+.ob-bubble-expect {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  margin: 0 36rpx 20rpx;
+  padding: 16rpx 20rpx;
+  background: rgba(30, 136, 229, 0.08);
+  border-left: 4rpx solid var(--color-primary, #1E88E5);
+  border-radius: 4rpx 12rpx 12rpx 4rpx;
+}
+.ob-bubble-expect-icon {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--color-primary, #1E88E5);
+  line-height: 1.5;
+}
+.ob-bubble-expect-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: var(--color-text, #1A2628);
+  line-height: 1.5;
+}
+
+/* 进度条 */
+.ob-bubble-progress {
+  margin: 0 36rpx 24rpx;
+  height: 8rpx;
+  background: rgba(30, 136, 229, 0.12);
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+.ob-bubble-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #5AB8F5 0%, #1E88E5 100%);
+  border-radius: 4rpx;
+  transition: width 0.32s ease;
+}
+
+/* 操作按钮 */
+.ob-bubble-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16rpx;
+  padding: 0 36rpx 32rpx;
+}
+.ob-bubble-primary {
+  padding: 18rpx 44rpx;
+  background: linear-gradient(135deg, #5AB8F5 0%, #1E88E5 100%);
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 500;
+  border-radius: 999rpx;
+  letter-spacing: 2rpx;
+  box-shadow: 0 8rpx 20rpx rgba(30, 136, 229, 0.32);
+}
+.ob-bubble-primary:active {
+  transform: scale(0.96);
+  opacity: 0.92;
+}
+
+/* 深色模式覆盖 */
+.ob-mask.dark .ob-bubble {
+  background: linear-gradient(180deg, #232E3A 0%, #1A232E 100%);
+  box-shadow: 0 28rpx 68rpx rgba(0, 0, 0, 0.55),
+              0 8rpx 22rpx rgba(0, 0, 0, 0.32);
+}
+.ob-mask.dark .ob-bubble-title {
+  color: #F2F5F8;
+}
+.ob-mask.dark .ob-bubble-desc {
+  color: #9AA8B8;
+}
+.ob-mask.dark .ob-bubble-expect {
+  background: rgba(90, 184, 245, 0.14);
+}
+.ob-mask.dark .ob-bubble-expect-icon {
+  color: #5AB8F5;
+}
+.ob-mask.dark .ob-bubble-expect-text {
+  color: #E5ECF3;
+}

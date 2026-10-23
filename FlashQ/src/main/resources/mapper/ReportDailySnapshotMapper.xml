@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.ReportDailySnapshotMapper">
+
+    <resultMap id="snapshotMap" type="com.flashq.entity.ReportDailySnapshot">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="date" column="date"/>
+        <result property="total" column="total"/>
+        <result property="correct" column="correct"/>
+        <result property="firstAt" column="first_at"/>
+        <result property="lastAt" column="last_at"/>
+        <result property="sections" column="sections"/>
+        <result property="source" column="source"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 按用户+日期加行锁查询（事件落库事务内使用） -->
+    <select id="selectForUpdate" resultMap="snapshotMap">
+        SELECT * FROM report_daily_snapshot
+        WHERE user_id = #{userId} AND date = #{date}
+        FOR UPDATE
+    </select>
+
+    <!-- 日期范围查询（热力图用，按日期升序） -->
+    <select id="selectRange" resultMap="snapshotMap">
+        SELECT * FROM report_daily_snapshot
+        WHERE user_id = #{userId} AND date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY date ASC
+    </select>
+
+    <!-- 服务端已有数据的最大日期（迁移冲突裁决用） -->
+    <select id="selectMaxDate" resultType="java.time.LocalDate">
+        SELECT MAX(date) FROM report_daily_snapshot WHERE user_id = #{userId}
+    </select>
+
+    <!-- 最近一次答题日期（汇总接口用） -->
+    <select id="selectLastActiveDate" resultType="java.time.LocalDate">
+        SELECT MAX(date) FROM report_daily_snapshot
+        WHERE user_id = #{userId} AND total &gt; 0
+    </select>
+
+    <!-- 累计答题数 / 正确数（汇总接口用） -->
+    <select id="sumByUser" resultType="map">
+        SELECT COALESCE(SUM(total), 0) AS total_questions,
+               COALESCE(SUM(correct), 0) AS total_correct
+        FROM report_daily_snapshot
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 累计活跃天数（汇总接口用） -->
+    <select id="countActiveDays" resultType="int">
+        SELECT COUNT(*) FROM report_daily_snapshot
+        WHERE user_id = #{userId} AND total &gt; 0
+    </select>
+
+    <insert id="insert" parameterType="com.flashq.entity.ReportDailySnapshot" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO report_daily_snapshot (user_id, date, total, correct, first_at, last_at, sections, source)
+        VALUES (#{userId}, #{date}, #{total}, #{correct}, #{firstAt}, #{lastAt}, #{sections}, #{source})
+    </insert>
+
+    <update id="updateById" parameterType="com.flashq.entity.ReportDailySnapshot">
+        UPDATE report_daily_snapshot
+        SET total = #{total},
+            correct = #{correct},
+            first_at = #{firstAt},
+            last_at = #{lastAt},
+            sections = #{sections},
+            source = #{source}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

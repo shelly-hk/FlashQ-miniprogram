@@ -1,0 +1,111 @@
+<!--
+  刷题前设置页
+  --------------------------------------------------
+  选择难度和科目后进入刷题
+  新手引导承接：第二步会高亮底部「开始刷题」按钮
+-->
+
+<view class="setup-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ========== 难度选择 ========== -->
+  <view class="section">
+    <text class="section-label">难度</text>
+    <view class="chip-list">
+      <view wx:for="{{difficulties}}"
+            wx:key="value"
+            class="chip {{selectedDifficulty === item.value ? 'chip-active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onSelectDifficulty"
+            hover-class="chip-hover"
+            hover-stay-time="100">
+        {{item.label}}
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 科目选择 ========== -->
+  <view class="section">
+    <text class="section-label">科目</text>
+
+    <view class="chip-list" wx:if="{{!loadingSubjects && subjects.length > 0}}">
+      <view wx:for="{{subjects}}"
+            wx:key="id"
+            class="chip {{selectedSubjectId === item.id ? 'chip-active' : ''}}"
+            data-id="{{item.id}}"
+            data-name="{{item.name}}"
+            bindtap="onSelectSubject"
+            hover-class="chip-hover"
+            hover-stay-time="100">
+        {{item.name}}
+      </view>
+    </view>
+
+    <view class="loading-hint" wx:elif="{{loadingSubjects}}">
+      <text>加载科目中…</text>
+    </view>
+  </view>
+
+  <!-- ========== 开始按钮 ========== -->
+  <view class="start-area">
+    <view class="selection-summary">
+      <text class="summary-label">当前选择</text>
+      <text class="summary-value">{{selectedSubjectName}} · {{selectedDifficultyLabel}}</text>
+    </view>
+    <view class="start-btn js-entry-start-btn {{onboardingStep ? 'ob-spotlight-target' : ''}}"
+          bindtap="onStart"
+          hover-class="btn-hover"
+          hover-stay-time="100">
+      <text class="start-btn-icon">▶</text>
+      <text>开始刷题</text>
+    </view>
+  </view>
+
+  <!-- ============================================================
+       新手引导 · 第二步气泡（高亮「开始刷题」按钮）
+       - 蒙层拦截非高亮区点击
+       - Spotlight 通过 box-shadow 镂空高亮目标
+       - 气泡给出标题 / 描述 / 操作预期 / 进度 / 主按钮
+       ============================================================ -->
+  <view wx:if="{{onboardingStep}}"
+        class="ob-mask {{onboardingClosing ? 'closing' : ''}} {{darkMode ? 'dark' : ''}}"
+        catchtap="onOnboardingNoop" catchtouchmove="onOnboardingNoop">
+
+    <!-- Spotlight 镂空层 -->
+    <view wx:if="{{onboardingSpotlight}}"
+          class="ob-spotlight"
+          style="left:{{onboardingSpotlight.left}}px;top:{{onboardingSpotlight.top}}px;width:{{onboardingSpotlight.width}}px;height:{{onboardingSpotlight.height}}px;"
+          catchtap="onOnboardingTargetTap">
+    </view>
+
+    <!-- 单步气泡 -->
+    <view class="ob-bubble-wrap {{onboardingSpotlight ? 'with-target' : 'centered'}}">
+      <view class="ob-bubble">
+
+        <view class="ob-bubble-head">
+          <view class="ob-bubble-orb ob-bubble-orb-a"></view>
+          <view class="ob-bubble-orb ob-bubble-orb-b"></view>
+          <text class="ob-bubble-step">{{onboardingStepIndex + 1}} / {{onboardingTotal}}</text>
+          <text class="ob-bubble-icon">{{onboardingStep.icon}}</text>
+        </view>
+
+        <text class="ob-bubble-title">{{onboardingStep.title}}</text>
+        <text class="ob-bubble-desc">{{onboardingStep.desc}}</text>
+        <view wx:if="{{onboardingStep.expectation}}" class="ob-bubble-expect">
+          <text class="ob-bubble-expect-icon">→</text>
+          <text class="ob-bubble-expect-text">{{onboardingStep.expectation}}</text>
+        </view>
+
+        <view class="ob-bubble-progress">
+          <view class="ob-bubble-progress-bar" style="width:{{(onboardingStepIndex + 1) * 100 / onboardingTotal}}%;"></view>
+        </view>
+
+        <view class="ob-bubble-actions">
+          <view class="ob-bubble-primary" catchtap="onOnboardingPrimary">{{onboardingStep.primaryText}}</view>
+        </view>
+
+      </view>
+    </view>
+
+  </view>
+
+</view>

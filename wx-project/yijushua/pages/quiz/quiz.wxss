@@ -1,0 +1,1438 @@
+/**
+ * 刷题页样式
+ * --------------------------------------------------
+ * 布局：筛选条 → 题干区 → 选项区 → 反馈区
+ * 优化：统一卡片阴影、边框宽度、圆角、字号层级
+ */
+
+/* ========== 整页容器 ========== */
+/* 色彩体系（刷题页局部覆盖）
+ * 主色：捣蓝色  #2B6CB0 → 做主交互色 / 文字
+ * 辅色：清水蓝  #DCEEF7 → 做背景
+ */
+.quiz-container {
+  position: relative;
+  /* 不再锁死 100vh，也不在 view 上做 overflow 滚动
+     （小程序普通 view 无法可靠地作为滚动容器）。
+     改为让内容自然撑开页面高度、由 page 本身滚动，
+     长题干/长解析时即可正常上下滑动查看。 */
+  min-height: 100vh;
+  background: #DCEEF7;
+}
+
+/* 双层通用布局 */
+.quiz-page.theme-layer {
+  padding: 24rpx 32rpx 48rpx;
+  box-sizing: border-box;
+}
+
+/* 浅色层：保持正常文档流。
+   绝对定位元素不参与父容器的滚动高度计算，必须由这一层真实撑开容器高度，
+   长题干/长解析才能滚动查看。 */
+.quiz-page.light-layer {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+/* 浅色层永远恒浅（照抄首页机制）：浅色层在 wxml 中不挂 dark 类，
+   永远继承 .quiz-page 第 75 行定义的日间变量与浅色背景渐变。
+   夜间变量定义在 .quiz-page.dark，只匹配挂了 dark 类的深色层，
+   所以扩散圆扫过之前浅色层卡片恒浅 —— 这是圆形扩散动画的视觉基础。 */
+
+/* 深色层（clip-path 圆形裁切）：绝对定位覆盖在浅色层上，纯视觉层。
+   高度仍由自身内容撑开（min-height 一屏），保证长内容下背景与内容完整。 */
+.quiz-page.dark-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  min-height: 100vh;
+  transition: clip-path 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              -webkit-clip-path 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  pointer-events: none;
+}
+
+/* 圆形扩散动画结束后，需无过渡切回 inset(0) 矩形全覆盖（避免长内容滚动露出浅色层）。
+   circle 与 inset 形状不同，浏览器无法良好插值，必须禁用过渡才能瞬间切换。 */
+.quiz-page.dark-layer.no-transition {
+  transition: none !important;
+}
+
+/* dark-layer 常驻 DOM 显隐控制：
+   visibility 不触发 layout（display:none 会），切换开销最小 */
+.quiz-page.dark-layer.dark-layer-hidden {
+  visibility: hidden;
+}
+
+.quiz-page {
+  /* 捣蓝主色调 */
+  --color-primary: #2B6CB0;
+  --color-text: #1A3A5C;
+  --color-text-secondary: #4A7BA8;
+  --color-text-hint: #6B9BC4;
+  /* 清水蓝辅色调 */
+  --color-bg: #DCEEF7;
+  --color-card: #FFFFFF;
+  --color-border: #B8DCF0;
+
+  /* 顶部微渐变，增加空间层次 */
+  background:
+    radial-gradient(90% 40% at 50% -8%, rgba(255, 255, 255, 0.55) 0%, transparent 65%),
+    linear-gradient(180deg, #E4F1FA 0%, #DCEEF7 40%, #D9EBF6 100%);
+}
+
+/* ========== BGM 开关按钮（音符） ========== */
+.bgm-toggle-btn {
+  position: fixed;
+  top: 24rpx;
+  right: 116rpx;
+  z-index: 100;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+  transition: background 0.25s ease, border-color 0.25s ease;
+  /* 强制独立合成层：避免无限旋转动画期间图层反复创建/销毁 */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* 深色模式：浅色半透明圆底 + 亮描边（与右侧主题按钮的夜间观感一致），
+   避免深色页面上按钮糊成一片 */
+.bgm-toggle-btn.night {
+  background: rgba(232, 232, 240, 0.16);
+  border: 2rpx solid rgba(232, 232, 240, 0.4);
+}
+
+/* 开启时变为深色，代表正在播放 BGM */
+.bgm-toggle-btn.on {
+  background: rgba(26, 26, 46, 0.85);
+  box-shadow: 0 4rpx 16rpx rgba(26, 26, 46, 0.3);
+}
+
+/* 深色模式开启态：琥珀色描边 + 光晕，明确"正在播放" */
+.bgm-toggle-btn.night.on {
+  border-color: rgba(255, 209, 102, 0.6);
+  box-shadow: 0 0 20rpx rgba(255, 183, 77, 0.35), 0 4rpx 16rpx rgba(26, 26, 46, 0.4);
+}
+
+/* 音符图标：日间深琥珀 / 深色模式亮琥珀，两种模式下都清晰可见
+   （原 🎵 emoji 未设显式颜色，部分设备渲染为深色字形，深色模式下看不清） */
+.bgm-toggle-icon {
+  font-size: 40rpx;
+  font-weight: 600;
+  line-height: 1;
+  color: #C77800;
+}
+
+.bgm-toggle-btn.night .bgm-toggle-icon {
+  color: #FFB74D;
+}
+
+.bgm-toggle-btn.on .bgm-toggle-icon {
+  color: #FFD166;
+  animation: bgmSpin 3s linear infinite;
+}
+
+@keyframes bgmSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ========== 唱片杆（唱臂）==========
+   与首页 home.wxss 完全一致：
+   唱片圆心 = 距右 152rpx / 距顶 60rpx（按钮 right:116 + 半径36、top:24 + 半径36）
+   支点圆心 = 唱片正上方「距右 152rpx / 距顶 10rpx」，杆长 50rpx
+   —— 停止态 rotate(62deg)：整根杆离唱片边缘最近 44.1rpx > 半径 36(+2rpx 描边)，明显抬离唱片；
+      抬向左侧（页面内侧），避开右侧的主题切换按钮（本页 right:32，占 32~104rpx）
+   —— 播放态 rotate(-34deg)：唱头落在距圆心 29rpx 处（约 0.8R，唱片的纹路上），最右侧约 118rpx
+   只在 .bgm-arm 上写 transform，内部零件随容器一起转，不额外叠加旋转 */
+.bgm-arm {
+  position: fixed;
+  top: 0rpx;                /* 支点圆心 = 此处 + 10rpx，与按钮 top:24 配套（圆心 60 - 杆长 50） */
+  right: 142rpx;            /* 142 + 10(支点半径) = 152，与唱片圆心同一条竖线 */
+  z-index: 101;             /* 高于唱片按钮(100)，唱臂压在唱片之上 */
+  width: 20rpx;
+  height: 60rpx;
+  transform-origin: 10rpx 10rpx;   /* 支点圆心 */
+  transform: rotate(62deg);        /* 默认：抬起 */
+  transition: transform 0.55s cubic-bezier(0.32, 1.24, 0.58, 1);
+}
+
+/* 播放：唱臂落下 */
+.bgm-arm.on {
+  transform: rotate(-34deg);
+}
+
+/* 配重（支点后端的配重块，随杆一起转） */
+.bgm-arm-weight {
+  position: absolute;
+  left: 6rpx;
+  top: 1rpx;
+  width: 8rpx;
+  height: 10rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(90deg, #B9BFCE 0%, #F2F4F8 45%, #8F95A8 100%);
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.25);
+}
+
+/* 杆身：金属渐变，浅色/深色背景下都能看清 */
+.bgm-arm-rod {
+  position: absolute;
+  left: 7rpx;
+  top: 10rpx;
+  width: 6rpx;
+  height: 44rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(90deg, #C9CEDB 0%, #F5F7FA 40%, #A6ACBD 100%);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.28);
+}
+
+/* 唱头（搭在唱片上的那一头） */
+.bgm-arm-head {
+  position: absolute;
+  left: 4rpx;
+  top: 46rpx;
+  width: 12rpx;
+  height: 14rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(180deg, #E9ECF4 0%, #8E94A8 100%);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.32);
+}
+
+/* 支点转轴 */
+.bgm-arm-pivot {
+  position: absolute;
+  left: 3rpx;
+  top: 3rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFFFFF 0%, #D7DBE6 45%, #8F95A8 100%);
+  border: 1rpx solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 播放态：唱头带一点琥珀色光晕，和唱片的琥珀描边呼应 */
+.bgm-arm.on .bgm-arm-head {
+  background: linear-gradient(180deg, #FFE1A6 0%, #E0A63C 100%);
+  box-shadow: 0 0 8rpx rgba(255, 183, 77, 0.55), 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 深色模式：唱臂整体调暗一档并保留金属高光，避免杆子在深底上过于刺眼 */
+.bgm-arm.night .bgm-arm-weight {
+  background: linear-gradient(90deg, #5F657A 0%, #BFC4D2 45%, #4E5468 100%);
+}
+.bgm-arm.night .bgm-arm-rod {
+  background: linear-gradient(90deg, #6E7488 0%, #C7CCDA 40%, #565C70 100%);
+}
+.bgm-arm.night .bgm-arm-head {
+  background: linear-gradient(180deg, #C3C8D6 0%, #6C7286 100%);
+}
+.bgm-arm.night .bgm-arm-pivot {
+  background: radial-gradient(circle at 35% 30%, #E8EAF2 0%, #A9AFC0 45%, #5C6276 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ========== 深色模式切换 ========== */
+.theme-toggle-btn {
+  position: fixed;
+  top: 24rpx;
+  right: 32rpx;
+  z-index: 100;
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  backdrop-filter: blur(10rpx);
+  -webkit-backdrop-filter: blur(10rpx);
+  /* 强制独立合成层：保证点击反馈和图标切换的稳定图层 */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.theme-icon {
+  font-size: 36rpx;
+}
+.filter-bar {
+  margin-bottom: 24rpx;
+}
+
+.filter-current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 20rpx 28rpx;
+  box-shadow: var(--shadow-card);
+  border: 1rpx solid var(--color-border);
+}
+
+.filter-icon {
+  font-size: 30rpx;
+  line-height: 1;
+}
+
+.filter-text {
+  font-size: 28rpx;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.filter-arrow {
+  font-size: 28rpx;
+  color: var(--color-primary);
+  transform: rotate(90deg);
+  transition: transform 0.25s;
+}
+
+.filter-arrow.arrow-up {
+  transform: rotate(-90deg);
+}
+
+/* 离线缓存提示：紧贴筛选条右侧，提示当前题来自本地缓存（断网兜底） */
+.offline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-top: 12rpx;
+  padding: 6rpx 16rpx;
+  background: rgba(255, 159, 67, 0.12);
+  border: 1rpx solid rgba(255, 159, 67, 0.4);
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #f08300;
+  animation: fadeIn 0.3s ease;
+}
+
+.offline-badge-icon {
+  font-size: 22rpx;
+  line-height: 1;
+}
+
+.offline-badge-text {
+  font-size: 22rpx;
+  line-height: 1;
+}
+
+/* ========== 复习模式进度条 ========== */
+/* 克制风格：细线条 + 小字号文字，避免抢夺题干视觉焦点 */
+.quiz-progress {
+  margin: -8rpx 0 24rpx;
+  padding: 0 16rpx;
+  animation: fadeIn 0.35s ease;
+}
+
+.progress-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4rpx;
+  font-size: 24rpx;
+  color: var(--color-text-hint);
+  letter-spacing: 1rpx;
+  margin-bottom: 12rpx;
+}
+
+.progress-current {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.progress-track {
+  position: relative;
+  width: 100%;
+  height: 6rpx;
+  background: var(--color-border);
+  border-radius: 6rpx;
+  overflow: hidden;
+  opacity: 0.65;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 100%);
+  border-radius: 6rpx;
+  transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 筛选面板 */
+.filter-panel {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow-card);
+  animation: slideDown 0.3s ease;
+}
+
+.filter-section {
+  margin-bottom: 32rpx;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  display: block;
+  font-size: 26rpx;
+  color: var(--color-text-hint);
+  margin-bottom: 20rpx;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.filter-pill {
+  font-size: 28rpx;
+  color: var(--color-text);
+  background: #DCEEF7;
+  border-radius: 32rpx;
+  padding: 14rpx 32rpx;
+  transition: all 0.2s;
+}
+
+.filter-pill.pill-active {
+  background: var(--color-primary);
+  color: #ffffff;
+  font-weight: 500;
+  box-shadow: 0 4rpx 12rpx rgba(43, 108, 176, 0.3);
+}
+
+/* ========== 加载提示 ========== */
+.loading-tip {
+  text-align: center;
+  padding: 200rpx 0;
+  color: var(--color-text-hint);
+  font-size: 28rpx;
+}
+
+.empty-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 16rpx;
+}
+
+.empty-hint-text {
+  display: block;
+  font-size: 26rpx;
+}
+
+.retry-btn {
+  display: inline-block;
+  margin-top: 32rpx;
+  padding: 20rpx 56rpx;
+  background: linear-gradient(135deg, #3D82D0 0%, #2B6CB0 100%);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 500;
+  border-radius: 48rpx;
+  box-shadow: 0 8rpx 20rpx rgba(43, 108, 176, 0.3);
+}
+
+/* ========== 题干区 ========== */
+.question-header {
+  margin-bottom: 40rpx;
+  animation: fadeIn 0.4s ease;
+}
+
+.tags {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.tag {
+  font-size: 24rpx;
+  padding: 8rpx 20rpx;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.tag-subject {
+  background: #DCEEF7;
+  color: var(--color-primary);
+}
+
+.tag-difficulty {
+  background: #fff5e6;
+  color: var(--color-warning);
+}
+
+.tag-multi {
+  background: linear-gradient(135deg, #ff9a56, #ff6b6b);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tag-type {
+  background: linear-gradient(135deg, #0ABAB5, #06d6a0);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tag-source {
+  background: #e8e0ff;
+  color: #6c5ce7;
+  font-weight: 500;
+}
+
+/* ========== 多选题 ========== */
+.multi-checkbox {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 3rpx solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: var(--color-text-hint);
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.multi-checkbox.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.multi-submit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 24rpx 8rpx 0;
+  gap: 20rpx;
+}
+
+.multi-hint {
+  font-size: 26rpx;
+  color: var(--color-text-hint);
+}
+
+.multi-submit-btn {
+  flex: 1;
+  max-width: 320rpx;
+  text-align: center;
+  padding: 22rpx 0;
+  font-size: 30rpx;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.multi-submit-btn.btn-disabled {
+  background: var(--color-border);
+  color: var(--color-text-hint);
+}
+
+/* 题干卡片：聚焦阅读区 */
+.question-card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 36rpx 32rpx;
+  box-shadow: var(--shadow-card);
+  border: 1rpx solid var(--color-border);
+  border-left: 8rpx solid var(--color-primary);
+}
+
+.question-content {
+  font-size: calc(36rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.7;
+  /* 题干是 view 渲染，默认会折叠换行符；保留题目原本的换行结构
+     （面试题常含"示例：\n输入...\n输出..."多行内容） */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ========== 选项区 ========== */
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.option-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-card);
+  border: 2rpx solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 28rpx 32rpx;
+  box-shadow: var(--shadow-card);
+  /* 抬起复原时 Q 弹回弹（带轻微过冲） */
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  /* backwards（而非 both）：避免动画结束后占用 transform 导致按压 scale 失效 */
+  animation: fadeInUp 0.4s ease backwards;
+}
+
+/* 答题选项按压反馈：瞬间缩小（不覆盖评判配色，故只缩放不改背景） */
+.option-card.hover-card {
+  transform: scale(0.96);
+  opacity: 1;
+  transition-duration: 0.04s;
+}
+
+/* 选项字母徽章（单选题） */
+.option-letter {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: #EAF3FB;
+  border: 2rpx solid var(--color-border);
+  line-height: 1;
+}
+
+.opt-selected .option-letter {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #FFFFFF;
+}
+
+.opt-correct .option-letter {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #FFFFFF;
+}
+
+.opt-wrong .option-letter {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #FFFFFF;
+}
+
+.option-text {
+  flex: 1;
+  font-size: calc(32rpx * var(--font-scale, 1));
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.option-icon {
+  font-size: 40rpx;
+  font-weight: bold;
+  margin-left: 16rpx;
+}
+
+.opt-selected {
+  border-color: var(--color-primary);
+  background: #E3F0FA;
+  box-shadow: 0 4rpx 16rpx rgba(43, 108, 176, 0.15);
+}
+
+.opt-correct {
+  border-color: var(--color-success);
+  background: #e7f8ee;
+}
+
+.opt-correct .option-text {
+  color: var(--color-success);
+}
+
+.opt-correct .option-icon {
+  color: var(--color-success);
+}
+
+.opt-wrong {
+  border-color: var(--color-danger);
+  background: #fef0f2;
+  /* 红色摇头动画：旋转 + 轻微位移，比纯抖动更生动 */
+  animation: headShake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  transform-origin: center bottom;
+}
+
+.opt-wrong .option-text {
+  color: var(--color-danger);
+}
+
+.opt-wrong .option-icon {
+  color: var(--color-danger);
+}
+
+/* ========== 反馈区 ========== */
+.feedback {
+  margin-top: 32rpx;
+  animation: fadeInUp 0.4s ease both;
+}
+
+/* ========== 反馈区 ========== */
+.result-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 26rpx 32rpx;
+  border-radius: var(--radius-md);
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 24rpx;
+}
+
+/* 对错图标圆底 */
+.result-icon {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.result-correct .result-icon { background: var(--color-success); }
+.result-wrong .result-icon { background: var(--color-danger); }
+
+.result-correct {
+  background: #e7f8ee;
+  color: var(--color-success);
+}
+
+.countdown-tag {
+  margin-left: auto;
+  font-size: 26rpx;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.result-wrong {
+  background: #fef0f2;
+  color: var(--color-danger);
+}
+
+.explanation {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 32rpx;
+  box-shadow: var(--shadow-card);
+  border-left: 8rpx solid var(--color-primary);
+}
+
+.explanation-label {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  font-size: 26rpx;
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-bottom: 16rpx;
+  letter-spacing: 2rpx;
+}
+
+/* 解析标签前的小圆点 */
+.explanation-label::before {
+  content: '';
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.explanation-text {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  /* 保留解析中的换行与要点结构（如"解法一：\n- 初始化..."） */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ========== 面试题专属：问答题/OJ题模式 ========== */
+/* 不展示选项，提供"查看解析"按钮，用户手动看解析后手动下一题 */
+.interview-actions {
+  margin-top: 40rpx;
+  display: flex;
+  justify-content: center;
+  animation: fadeInUp 0.4s ease both;
+}
+
+.interview-reveal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14rpx;
+  padding: 28rpx 80rpx;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #3D82D0 0%, #2B6CB0 100%);
+  color: #ffffff;
+  font-size: 34rpx;
+  font-weight: 500;
+  box-shadow: 0 10rpx 28rpx rgba(74, 159, 224, 0.32);
+}
+
+.interview-reveal-icon {
+  font-size: 36rpx;
+}
+
+/* 收起解析按钮：次要样式（描边），弱化视觉权重，放在解析面板底部，
+   长解析滚到底部时可直接收起，不必回到顶部 */
+.interview-hide-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 22rpx 64rpx;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+/* 解析面板（面试题）— 复用 .feedback .explanation 样式，独立容器轻量浮入 */
+.interview-feedback {
+  margin-top: 32rpx;
+  animation: fadeInUp 0.4s ease both;
+}
+
+/* 深色模式适配 */
+.quiz-page.dark .interview-reveal-btn {
+  box-shadow: 0 8rpx 24rpx rgba(74, 159, 224, 0.3);
+}
+
+/* ========== 底部操作区 ========== */
+.bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48rpx;
+  margin-top: 56rpx;
+}
+
+.quiz-tip-bar {
+  text-align: center;
+  margin-top: 24rpx;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.quiz-tip-text {
+  font-size: 26rpx;
+  color: var(--color-text-hint);
+  letter-spacing: 1rpx;
+}
+
+.prev-btn {
+  color: var(--color-primary);
+  font-size: 30rpx;
+  padding: 18rpx 36rpx;
+  border-radius: var(--radius-md);
+  border: 2rpx solid var(--color-border);
+  background: var(--color-card);
+  font-weight: 500;
+}
+
+/* 收藏按钮：柔和圆底 */
+.favorite-btn {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  color: #B8560F;
+  background: var(--color-card);
+  border: 2rpx solid var(--color-border);
+  line-height: 1;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.favorite-btn.favorited {
+  color: #F5A623;
+  border-color: #F5D9A0;
+  background: #FFF9EC;
+  animation: pop 0.3s ease;
+}
+
+.next-btn {
+  flex: 1;
+  max-width: 400rpx;
+  text-align: center;
+  background: linear-gradient(135deg, #3D82D0 0%, #2B6CB0 100%);
+  color: #ffffff;
+  font-size: 34rpx;
+  font-weight: 600;
+  padding: 28rpx 0;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8rpx 24rpx rgba(43, 108, 176, 0.35);
+}
+
+.next-btn-skip {
+  background: var(--color-card);
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+  box-shadow: none;
+  font-size: 30rpx;
+  padding: 26rpx 0;
+  font-weight: 500;
+}
+
+/* ========== 移除错题按钮 ========== */
+.remove-wrong-bar {
+  margin-top: 24rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.remove-wrong-btn {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 18rpx 44rpx;
+  border-radius: 48rpx;
+  background: #fef0f2;
+  color: var(--color-danger);
+  font-size: 28rpx;
+  font-weight: 500;
+  border: 2rpx solid rgba(238, 10, 36, 0.35);
+}
+
+.remove-wrong-icon {
+  font-size: 32rpx;
+}
+
+/* ========== 过渡动画 @keyframes ========== */
+
+/* 淡入 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 上滑淡入（卡片入场） */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 下滑展开（筛选面板） */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-16rpx); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 弹跳（收藏按钮） */
+@keyframes pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* 抖动（答错反馈） */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-10rpx); }
+  40%      { transform: translateX(10rpx); }
+  60%      { transform: translateX(-6rpx); }
+  80%      { transform: translateX(6rpx); }
+}
+
+/* 摇头动画（答错反馈）：左右旋转 + 轻微位移，像人在摇头 */
+@keyframes headShake {
+  0%   { transform: rotate(0deg)    translateX(0); }
+  15%  { transform: rotate(-8deg)   translateX(-6rpx); }
+  30%  { transform: rotate(7deg)    translateX(6rpx); }
+  45%  { transform: rotate(-5deg)   translateX(-4rpx); }
+  60%  { transform: rotate(4deg)    translateX(4rpx); }
+  75%  { transform: rotate(-2deg)   translateX(0); }
+  100% { transform: rotate(0deg)    translateX(0); }
+}
+
+/* ========== 答对粒子爆开（纯视觉固定层） ========== */
+/* 放在双层主题之外（直接挂在 .quiz-container 下），
+   不受深色层 clip-path 影响，z-index 高于两层主题，
+   pointer-events:none 保证不阻挡点击 */
+.particle-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.particle-burst {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+/* 扩散光环：从中心向外扩散的圆环 */
+.particle-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40rpx;
+  height: 40rpx;
+  margin: -20rpx 0 0 -20rpx;
+  border-radius: 50%;
+  border: 6rpx solid #10B981;
+  opacity: 0;
+  animation: ringExpand 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-sizing: border-box;
+}
+
+.particle-ring-2 {
+  animation-delay: 0.15s;
+  border-color: #5EEAD4;
+  border-width: 4rpx;
+}
+
+@keyframes ringExpand {
+  0%   { transform: scale(0);    opacity: 0.9; }
+  60%  { opacity: 0.5; }
+  100% { transform: scale(9);    opacity: 0; }
+}
+
+/* 单个粒子：通过 --angle/--distance 控制方向与距离 */
+.particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  opacity: 0;
+  animation: particleBurst 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  animation-delay: var(--delay, 0s);
+  box-shadow: 0 0 8rpx rgba(16, 185, 129, 0.6);
+}
+
+@keyframes particleBurst {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--angle, 0deg)) translateY(0) scale(1);
+  }
+  70% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle, 0deg)) translateY(calc(-1 * var(--distance, 240rpx))) scale(0.25);
+  }
+}
+
+/* ============================================================
+   新手引导（quiz 页承接样式）
+   ------------------------------------------------------------
+   - 独立 overlay，不受双层主题影响
+   - Spotlight 镂空高亮选项区
+   - 气泡给出标题 / 描述 / 操作预期 / 进度 / 主按钮
+   ============================================================ */
+.ob-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1200;            /* 高于双层主题（z-index: 999 粒子层）但低于复习完成提示 */
+  background: transparent;
+  opacity: 1;
+  pointer-events: none;     /* 让点击穿透到真实选项，引导中允许用户直接答题 */
+  transition: opacity 0.26s ease;
+}
+.ob-mask.closing {
+  opacity: 0;
+}
+
+.ob-spotlight {
+  position: absolute;
+  border-radius: 24rpx;
+  background: transparent;
+  box-shadow: 0 0 0 9999rpx rgba(8, 18, 30, 0.78);
+  animation: obSpotlightPulse 1.8s ease-in-out infinite;
+  z-index: 1201;
+}
+@keyframes obSpotlightPulse {
+  0%, 100% { box-shadow: 0 0 0 9999rpx rgba(8, 18, 30, 0.78); }
+  50%      { box-shadow: 0 0 0 9999rpx rgba(8, 18, 30, 0.72); }
+}
+
+.ob-bubble-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 1202;
+  pointer-events: none;
+}
+.ob-bubble-wrap.centered {
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: center;
+}
+.ob-bubble-wrap.with-target {
+  bottom: 32rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.ob-bubble {
+  pointer-events: auto;
+  width: 600rpx;
+  max-width: 88%;
+  background: #FFFFFF;
+  border-radius: 28rpx;
+  box-shadow: 0 24rpx 60rpx rgba(8, 18, 30, 0.22);
+  padding: 36rpx 32rpx 28rpx;
+  animation: obBubbleIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes obBubbleIn {
+  0%   { opacity: 0; transform: translateY(24rpx) scale(0.92); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ob-bubble-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 18rpx;
+}
+.ob-bubble-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(20rpx);
+  opacity: 0.55;
+  z-index: 0;
+}
+.ob-bubble-orb-a {
+  width: 140rpx;
+  height: 140rpx;
+  background: #14CFC9;
+  left: -40rpx;
+  top: -60rpx;
+}
+.ob-bubble-orb-b {
+  width: 100rpx;
+  height: 100rpx;
+  background: #0ABAB5;
+  right: -20rpx;
+  top: -30rpx;
+}
+.ob-bubble-step {
+  position: relative;
+  z-index: 1;
+  font-size: 22rpx;
+  color: #0ABAB5;
+  background: rgba(10, 186, 181, 0.10);
+  padding: 6rpx 14rpx;
+  border-radius: 10rpx;
+  letter-spacing: 1rpx;
+}
+.ob-bubble-icon {
+  position: relative;
+  z-index: 1;
+  font-size: 44rpx;
+  margin-left: auto;
+  line-height: 1;
+}
+
+.ob-bubble-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #2D3A3A;
+  margin-bottom: 12rpx;
+}
+.ob-bubble-desc {
+  display: block;
+  font-size: 26rpx;
+  color: #6B9F9C;
+  line-height: 1.6;
+  margin-bottom: 18rpx;
+}
+
+.ob-bubble-expect {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  background: rgba(10, 186, 181, 0.08);
+  border-left: 4rpx solid #0ABAB5;
+  border-radius: 8rpx;
+  padding: 16rpx 18rpx;
+  margin-bottom: 22rpx;
+}
+.ob-bubble-expect-icon {
+  font-size: 22rpx;
+  color: #0ABAB5;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.ob-bubble-expect-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: #2D3A3A;
+  line-height: 1.5;
+}
+
+.ob-bubble-progress {
+  width: 100%;
+  height: 8rpx;
+  background: rgba(10, 186, 181, 0.10);
+  border-radius: 4rpx;
+  overflow: hidden;
+  margin-bottom: 22rpx;
+}
+.ob-bubble-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #14CFC9 0%, #0ABAB5 100%);
+  border-radius: 4rpx;
+  transition: width 0.4s ease;
+}
+
+.ob-bubble-actions {
+  display: flex;
+  gap: 16rpx;
+}
+.ob-bubble-primary {
+  flex: 1;
+  text-align: center;
+  padding: 22rpx 0;
+  background: linear-gradient(135deg, #14CFC9 0%, #0AA8A3 100%);
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 18rpx;
+  letter-spacing: 2rpx;
+  box-shadow: 0 8rpx 20rpx rgba(10, 168, 163, 0.30);
+}
+
+/* ========== 深色模式覆盖（引导气泡） ========== */
+.ob-mask.dark .ob-bubble {
+  background: #252540;
+  box-shadow: 0 24rpx 60rpx rgba(0, 0, 0, 0.55);
+}
+.ob-mask.dark .ob-bubble-orb-a { background: #5EEAD4; }
+.ob-mask.dark .ob-bubble-orb-b { background: #14CFC9; }
+.ob-mask.dark .ob-bubble-step {
+  color: #5EEAD4;
+  background: rgba(94, 234, 212, 0.12);
+}
+.ob-mask.dark .ob-bubble-title { color: #E8E8F0; }
+.ob-mask.dark .ob-bubble-desc { color: #AABBDD; }
+.ob-mask.dark .ob-bubble-expect {
+  background: rgba(94, 234, 212, 0.10);
+  border-left-color: #5EEAD4;
+}
+.ob-mask.dark .ob-bubble-expect-icon { color: #5EEAD4; }
+.ob-mask.dark .ob-bubble-expect-text { color: #E8E8F0; }
+.ob-mask.dark .ob-bubble-progress {
+  background: rgba(94, 234, 212, 0.12);
+}
+.ob-mask.dark .ob-bubble-progress-bar {
+  background: linear-gradient(90deg, #5EEAD4 0%, #14CFC9 100%);
+}
+
+@media (max-width: 360px) {
+  .ob-bubble {
+    width: 92%;
+    padding: 32rpx 28rpx 24rpx;
+  }
+  .ob-bubble-title { font-size: 32rpx; }
+  .ob-bubble-desc { font-size: 25rpx; }
+}
+
+/* ========== 深色模式 ==========
+ * 严格遵循 WCAG AA 对比度（正常文本 ≥ 4.5:1，大文本 ≥ 3:1）
+ * 验证：背景 #1A1A2E / 卡片 #252540
+ *   text          #E8E8F0 → 14.2:1 ✓ AAA
+ *   text-secondary #AABBDD → 7.8:1  ✓ AAA
+ *   text-hint     #9DB2D1 → 5.5:1  ✓ AA  （原 #7788AA 仅 3.8:1 ❌）
+ *   primary       #4A9FE0 → 6.5:1  ✓ AA
+ */
+.quiz-page.dark {
+  /* 深色背景：两层共享 .quiz-page，必须显式覆盖日间渐变，否则深模式下发白 */
+  background: linear-gradient(180deg, #20244A 0%, #1A1A2E 45%, #15152B 100%);
+  --color-primary: #4A9FE0;
+  --color-text: #E8E8F0;
+  --color-text-secondary: #AABBDD;
+  --color-text-hint: #9DB2D1;
+  --color-bg: #1A1A2E;
+  --color-card: #252540;
+  --color-border: #353560;
+}
+
+.quiz-page.dark .option-card {
+  border-color: #353560;
+}
+
+.quiz-page.dark .opt-correct {
+  background: rgba(94, 234, 212, 0.12);
+  border-color: #5EEAD4;
+}
+
+.quiz-page.dark .opt-wrong {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: #FF6B6B;
+}
+
+.quiz-page.dark .feedback-correct {
+  background: rgba(94, 234, 212, 0.08);
+  border-color: #5EEAD4;
+}
+
+.quiz-page.dark .feedback-wrong {
+  background: rgba(255, 107, 107, 0.08);
+  border-color: #FF6B6B;
+}
+
+.quiz-page.dark .prev-btn {
+  background: #252540;
+}
+
+.quiz-page.dark .filter-pill {
+  background: #353560;
+  color: #E8E8F0;
+}
+
+.quiz-page.dark .filter-pill.pill-active {
+  background: #4A9FE0;
+  color: #ffffff;
+  box-shadow: 0 4rpx 12rpx rgba(74, 159, 224, 0.3);
+}
+
+.quiz-page.dark .next-btn {
+  box-shadow: 0 8rpx 24rpx rgba(74, 159, 224, 0.3);
+}
+
+.quiz-page.dark .option-letter {
+  background: #353560;
+  border-color: #353560;
+  color: #AABBDD;
+}
+
+.quiz-page.dark .opt-selected .option-letter {
+  background: #4A9FE0;
+  border-color: #4A9FE0;
+  color: #ffffff;
+}
+
+.quiz-page.dark .favorite-btn {
+  background: #252540;
+  border-color: #353560;
+}
+
+.quiz-page.dark .favorite-btn.favorited {
+  background: rgba(245, 166, 35, 0.12);
+  border-color: rgba(245, 166, 35, 0.4);
+}
+
+.quiz-page.dark .review-done-icon {
+  background: linear-gradient(135deg, #2E3A55 0%, #26304A 100%);
+  box-shadow: inset 0 2rpx 4rpx rgba(255, 255, 255, 0.06);
+}
+
+.quiz-page.dark .result-correct {
+  background: rgba(94, 234, 212, 0.1);
+}
+
+.quiz-page.dark .result-wrong {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+/* ========== 专项复习：刷完提示 ========== */
+.review-done-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 30, 50, 0.45);
+  backdrop-filter: blur(8rpx);
+  -webkit-backdrop-filter: blur(8rpx);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease;
+}
+.review-done-card {
+  width: 560rpx;
+  background: var(--color-card, #fff);
+  border-radius: 28rpx;
+  padding: 64rpx 40rpx 48rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+  box-shadow: 0 24rpx 64rpx rgba(10, 30, 50, 0.25);
+  animation: reviewDoneIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes reviewDoneIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.review-done-icon {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #E8F6FE 0%, #D6EBF9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72rpx;
+  margin-bottom: 8rpx;
+  box-shadow: inset 0 2rpx 4rpx rgba(255, 255, 255, 0.9), 0 8rpx 24rpx rgba(43, 108, 176, 0.15);
+}
+.review-done-title { font-size: 34rpx; font-weight: 600; color: var(--color-text, #2D3A3A); }
+.review-done-desc { font-size: 26rpx; color: var(--color-text-secondary, #999); }
+.review-done-btns { display: flex; gap: 24rpx; margin-top: 20rpx; }
+.review-done-btn {
+  padding: 20rpx 48rpx;
+  border-radius: 48rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  background: linear-gradient(135deg, #3D82D0 0%, #2B6CB0 100%);
+  color: #fff;
+  box-shadow: 0 8rpx 20rpx rgba(43, 108, 176, 0.3);
+}
+.review-done-back {
+  background: transparent;
+  border: 2rpx solid var(--color-border, #ddd);
+  color: var(--color-text-secondary, #999);
+}

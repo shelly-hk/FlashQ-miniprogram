@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.ReportPosterMapper">
+
+    <resultMap id="posterMap" type="com.flashq.entity.ReportPoster">
+        <id property="id" column="id"/>
+        <result property="posterId" column="poster_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="template" column="template"/>
+        <result property="rangeJson" column="range_json"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="thumbUrl" column="thumb_url"/>
+        <result property="shareToken" column="share_token"/>
+        <result property="idempotencyKey" column="idempotency_key"/>
+        <result property="status" column="status"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="generatedAt" column="generated_at"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.flashq.entity.ReportPoster" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO report_poster
+            (poster_id, user_id, template, range_json, image_url, thumb_url,
+             share_token, idempotency_key, status, expires_at, generated_at)
+        VALUES
+            (#{posterId}, #{userId}, #{template}, #{rangeJson}, #{imageUrl}, #{thumbUrl},
+             #{shareToken}, #{idempotencyKey}, #{status}, #{expiresAt}, #{generatedAt})
+    </insert>
+
+    <!-- 幂等查询：某用户 24 小时内相同幂等键的海报（规范 3.8 幂等行为） -->
+    <select id="findByIdempotencyKey" resultMap="posterMap">
+        SELECT * FROM report_poster
+        WHERE user_id = #{userId} AND idempotency_key = #{idempotencyKey}
+          AND create_time &gt;= #{since}
+        LIMIT 1
+    </select>
+
+    <select id="findByPosterId" resultMap="posterMap">
+        SELECT * FROM report_poster WHERE poster_id = #{posterId} LIMIT 1
+    </select>
+
+    <!-- 通过分享 Token 反查海报与归属用户（分享回流用） -->
+    <select id="findByShareToken" resultMap="posterMap">
+        SELECT * FROM report_poster WHERE share_token = #{shareToken} LIMIT 1
+    </select>
+
+    <!-- 当日已生成海报数（限流：单用户每日 10 次） -->
+    <select id="countTodayByUser" resultType="int">
+        SELECT COUNT(*) FROM report_poster
+        WHERE user_id = #{userId} AND create_time &gt;= #{from}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE report_poster
+        SET status = #{status},
+            generated_at = #{generatedAt}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

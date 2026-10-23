@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.CustomFavoriteMapper">
+
+    <!-- 查询用户自主题库收藏列表（分页，关联题目信息，可选按分类筛选） -->
+    <select id="findByUserId" resultType="com.flashq.entity.CustomFavorite">
+        SELECT cf.* FROM custom_favorite cf
+        INNER JOIN custom_question cq ON cf.question_id = cq.id
+        WHERE cf.user_id = #{userId}
+          AND cq.is_deleted = 0
+        <if test="categoryId != null and categoryId > 0">
+          AND cq.category_id = #{categoryId}
+        </if>
+        ORDER BY cf.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计用户自主题库收藏总数（可选按分类筛选） -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM custom_favorite cf
+        INNER JOIN custom_question cq ON cf.question_id = cq.id
+        WHERE cf.user_id = #{userId}
+          AND cq.is_deleted = 0
+        <if test="categoryId != null and categoryId > 0">
+          AND cq.category_id = #{categoryId}
+        </if>
+    </select>
+
+    <!-- 判断是否已收藏 -->
+    <select id="countByUserAndQuestion" resultType="int">
+        SELECT COUNT(*) FROM custom_favorite
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </select>
+
+    <!-- 新增收藏 -->
+    <insert id="insert" parameterType="com.flashq.entity.CustomFavorite" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO custom_favorite (user_id, question_id)
+        VALUES (#{userId}, #{questionId})
+    </insert>
+
+    <!-- 删除收藏（按用户+题目） -->
+    <delete id="deleteByUserIdAndQuestionId">
+        DELETE FROM custom_favorite
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </delete>
+
+    <!-- 按题目ID删除（级联删除） -->
+    <delete id="deleteByQuestionId">
+        DELETE FROM custom_favorite WHERE question_id = #{questionId}
+    </delete>
+
+</mapper>

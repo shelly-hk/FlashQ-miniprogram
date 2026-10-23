@@ -1,0 +1,99 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/quiz_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.flashq.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 日志配置详见 logback-spring.xml（控制台 + 文件输出 + 按天滚动）
+logging:
+  config: classpath:logback-spring.xml
+
+# 文件上传 & AI Agent 配置
+app:
+  # 服务端基础地址（用于拼接头像等静态资源 URL）
+  base-url: "https://api.flashq.site"
+  upload:
+    daily-limit: 30              # 每日免费上传次数（初期放宽）
+    image-max-size: 5242880      # 图片最大 5MB（字节）
+    doc-max-size: 1048576        # 文档最大 1MB（字节）
+    image-types: jpg,jpeg,png,webp
+    doc-types: pdf,doc,docx,txt
+    upload-dir: ./uploads        # 文件存储目录
+    agent-max-questions: 30      # Agent 单次最多生成题目数（与 Jev "大量"档 20-30 区间上限对齐）
+    agent-min-questions: 0       # Agent 最少题目数（0 = AI 可判断不出题）
+  # 学习报告模块配置（《学习报告后端新增功能开发规范》）
+  report:
+    # 热力图 level 分级阈值：0:0 / 1:1-{t1} / 2:t1+1-{t2} / 3:t2+1-{t3} / 4:≥t3+1
+    # 默认对齐规范 3.4：0 / 1-8 / 9-16 / 17-24 / ≥25，后台可调无需改代码
+    heatmap:
+      levels: 8,16,24
+  # AI 大模型配置（兼容 OpenAI/DeepSeek API 格式）
+  # 配置后 Agent 会调用 AI 根据文件内容自动生成"一句话"题目
+  # 留空则使用演示数据（开发联调用）
+  ai:
+    api-url: "https://chatapi.weixin.qq.com/openai/v1/chat/completions"                  # 如 https://api.deepseek.com/v1/chat/completions
+    api-key: ${AI_API_KEY}                  # 通过环境变量注入，如 sk-xxxxxxxxxxxx
+    model: Deepseek-v4-flash         # 模型名称
+
+  # Jev 决策模型配置（腾讯云 EdgeOne Makers · TypeSafe System One）
+  # 出题前置决策：内容是否适合出题 / 信息密度 / 出题量级 / 难度
+  # 文档：https://cloud.tencent.com/document/product/1552/138731
+  jev:
+    enabled: ${APP_JE_V_ENABLED:true}      # 是否启用（false 时完全走原逻辑）；环境变量可覆盖，应急开关
+    shadow-mode: ${APP_JE_V_SHADOW_MODE:true}  # true=只记录决策日志，不拦截不注入题数/难度（校准期建议开启）；false=正式生效
+    api-url: "https://ai-gateway.edgeone.link/v1/systemone"
+    api-key: ${JEV_API_KEY:}     # 通过环境变量注入，如 sk-xxxx；未配置时自动降级不拦截
+    model: "@makers/jev"
+    connect-timeout-ms: 4000     # 连接超时（毫秒）
+    read-timeout-ms: 8000        # 读取超时（毫秒），Jev 响应通常 1-2 秒
+    # 拦截阈值：suitable（yes=适合出题的概率）或 density（0~4 分档）低于阈值 → 不出题
+    # 已按真实样本校准：正常课件 0.93/3.13，垃圾内容 0.03/0，0.5/1.0 有充足间隔
+    min-suitable-noul: 0.5
+    min-density-score: 1.0
+    # 出题量级映射（count_tier → 题数区间，最终受 agent-max-questions 上限约束）
+    # Jev 只做分档判断，区间让 LLM 按实际信息量落点，避免为凑固定数量生成低质量题
+    count-few-min: 1
+    count-few-max: 5
+    count-medium-min: 6
+    count-medium-max: 19
+    count-many-min: 20
+    count-many-max: 30
+
+  # PaddleOCR 配置（免费开源，本地部署，无次数限制）
+  # 部署方式：服务器上运行 ocr_server.py（需 Python + paddlepaddle + paddleocr + flask）
+  #   pip install paddlepaddle paddleocr flask
+  #   python ocr_server.py    # 监听 8866 端口
+  ocr:
+    enabled: true               # 是否启用OCR（true/false）
+    server-url: "http://localhost:8866"  # PaddleOCR 服务地址（同服务器填 localhost）
+    connect-timeout-ms: 5000    # 连接超时（毫秒）：服务不可达时快速失败
+    read-timeout-ms: 60000      # 读取超时（毫秒）：含 OCR 推理 + 排队等待，60 秒兜底防线程挂死
+    health-timeout-ms: 2000     # 健康检查超时（毫秒）：OCR 崩溃假死时快速跳过，避免请求堆积
+
+# 微信小程序配置（内容安全检测需要）
+# 注意：wx 必须在顶层，与 WxSecurityServiceImpl 中 @Value("${wx.app-id:}") 对应
+wx:
+  app-id: "wx7356bb2027566f78"        # 替换为你的小程序 appId
+  app-secret: ${WX_APP_SECRET}    # 通过环境变量注入
+  # 每日刷题提醒（订阅消息下发）
+  # 模板：打卡提醒（模版编号 76018），字段：time5 提醒时间 / thing7 发送人 / thing3 备注
+  reminder:
+    enabled: true                               # 模板已配置，开启定时下发
+    template-id: "uRswDZV9s8W5KQEPgl58AjkmLZjCP--tuJpX-EkLvpk"
+    page: "pages/home/home"                     # 点击订阅消息后跳转的小程序页面

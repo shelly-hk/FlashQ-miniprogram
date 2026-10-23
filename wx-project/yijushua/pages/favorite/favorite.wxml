@@ -1,0 +1,183 @@
+<!--
+  收藏列表页面
+  --------------------------------------------------
+  布局：Tab切换 → 筛选标签（科目/分类） → 收藏数量 → 收藏卡片列表 → 分页控件 → 空状态
+-->
+
+<view class="favorite-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ========== Tab 切换 ========== -->
+  <view class="fav-tabs">
+    <view class="fav-tab {{activeTab === 'public' ? 'tab-active' : ''}}" data-tab="public" bindtap="onTabChange" hover-class="hover-pill" hover-stay-time="100">
+      公共题库收藏
+    </view>
+    <view class="fav-tab {{activeTab === 'custom' ? 'tab-active' : ''}}" data-tab="custom" bindtap="onTabChange" hover-class="hover-pill" hover-stay-time="100">
+      自主题库收藏
+    </view>
+  </view>
+
+  <!-- ========== 公共题库二级分类（随机刷题 / 代码题库 / 面试题库） ========== -->
+  <view wx:if="{{activeTab === 'public'}}" class="sub-tabs">
+    <view
+      wx:for="{{publicSubTabs}}"
+      wx:key="id"
+      class="sub-tab {{activeQuizType === item.id ? 'sub-tab-active' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="onQuizTypeChange"
+      hover-class="hover-pill"
+      hover-stay-time="100"
+    >{{item.name}}</view>
+  </view>
+
+  <!-- ========== 筛选（科目/分类）：点击展开面板，参考刷题页 ========== -->
+  <view class="filter-bar" wx:if="{{filterTabs.length > 0}}">
+    <view class="filter-current" bindtap="onToggleFilter" hover-class="hover-row" hover-stay-time="100">
+      <text class="filter-icon">📖</text>
+      <text class="filter-text">{{activeFilterName}}</text>
+      <text class="filter-arrow {{showFilter ? 'arrow-up' : ''}}">›</text>
+    </view>
+
+    <!-- 展开后的筛选面板 -->
+    <view wx:if="{{showFilter}}" class="filter-panel">
+      <view class="filter-section">
+        <text class="filter-label">{{activeTab === 'public' ? '按科目筛选' : '按分类筛选'}}</text>
+        <view class="filter-options">
+          <view
+            wx:for="{{filterTabs}}"
+            wx:key="id"
+            class="filter-pill {{activeFilter === item.id ? 'pill-active' : ''}}"
+            data-id="{{item.id}}"
+            data-name="{{item.name}}"
+            bindtap="onFilterChange"
+            hover-class="chip-hover"
+            hover-stay-time="100"
+          >{{item.name}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 顶部统计 ========== -->
+  <view class="header-bar" wx:if="{{list.length > 0}}">
+    <text class="header-total">共收藏 {{total}} 道题</text>
+    <view class="header-manage" bindtap="onToggleManage" hover-class="hover-pill" hover-stay-time="100">
+      {{manageMode ? '完成' : '管理'}}
+    </view>
+  </view>
+
+  <!-- ========== 批量操作工具栏（管理模式） ========== -->
+  <view class="batch-bar" wx:if="{{manageMode && list.length > 0}}">
+    <view class="batch-select-all" bindtap="onSelectAll" hover-class="hover-pill" hover-stay-time="100">
+      {{selectedIds.length >= list.length ? '取消全选' : '全选'}}
+    </view>
+    <view class="batch-remove {{selectedIds.length === 0 ? 'btn-disabled' : ''}}" bindtap="onBatchRemove" hover-class="hover-pill" hover-stay-time="100">
+      取消收藏{{selectedIds.length > 0 ? '(' + selectedIds.length + ')' : ''}}
+    </view>
+  </view>
+
+  <!-- ========== 收藏列表 ========== -->
+  <view class="favorite-list">
+
+    <view
+      wx:for="{{list}}"
+      wx:key="id"
+      class="favorite-card {{manageMode && item._selected ? 'selected' : ''}} {{expandedId === item.id ? 'expanded' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="{{manageMode ? 'onSelectItem' : 'onQuestionTap'}}"
+      hover-class="hover-card"
+      hover-stay-time="100"
+    >
+      <!-- 选择框（管理模式） -->
+      <view wx:if="{{manageMode}}" class="card-checkbox {{item._selected ? 'checked' : ''}}">
+        <text wx:if="{{item._selected}}" class="check-icon">✓</text>
+      </view>
+
+      <!-- 题目头部：科目标签 + 难度 + 取消收藏按钮 -->
+      <view class="card-top">
+        <view class="card-tags">
+          <!-- 题目类型标签（代码题/面试题） -->
+          <text class="tag tag-type" wx:if="{{activeTab === 'public' && item.quizType === 'code'}}">代码题</text>
+          <text class="tag tag-type" wx:if="{{activeTab === 'public' && item.quizType === 'interview'}}">面试题</text>
+          <!-- 面试题来源企业 -->
+          <text class="tag tag-source" wx:if="{{activeTab === 'public' && item.quizType === 'interview' && item.source}}">{{item.source}}</text>
+          <!-- 公共题库显示科目标签，自主题库显示分类标签 -->
+          <text class="tag tag-subject" wx:if="{{activeTab === 'public'}}">{{item.subjectName}}</text>
+          <text class="tag tag-subject" wx:if="{{activeTab === 'custom'}}">{{item.categoryName || '其他'}}</text>
+          <text class="tag tag-difficulty">难度{{item.difficulty === 1 ? '·初' : item.difficulty === 2 ? '·中' : '·高'}}</text>
+        </view>
+        <!-- 取消收藏：用 catchtap 阻止冒泡，不触发展开 -->
+        <view wx:if="{{!manageMode}}" class="remove-btn" data-id="{{item.id}}" catchtap="onRemoveFavorite" hover-class="hover-btn" hover-stay-time="100">取消收藏</view>
+      </view>
+
+      <!-- 题干（始终显示） -->
+      <view class="card-question">{{item.content}}</view>
+
+      <!-- 展开后显示的内容 -->
+      <block wx:if="{{expandedId === item.id}}">
+
+        <!-- 选项列表 -->
+        <view class="card-options">
+          <view
+            wx:for="{{item.optionsParsed}}"
+            wx:for-item="opt"
+            wx:key="letter"
+            class="card-option {{opt.letter === item.correctAnswer ? 'opt-correct' : ''}}"
+          >
+            <text class="opt-text">{{opt.text}}</text>
+            <text wx:if="{{opt.letter === item.correctAnswer}}" class="opt-mark opt-mark-correct">正确</text>
+          </view>
+        </view>
+
+        <!-- 解析 -->
+        <view class="card-explanation">
+          <text class="explanation-label">解析</text>
+          <text class="explanation-text">{{item.explanation || '暂无解析'}}</text>
+        </view>
+
+      </block>
+
+      <!-- 收起状态：显示简短信息 -->
+      <view wx:else class="card-brief">
+        <text class="brief-answer">正确答案 {{item.correctAnswer}}</text>
+      </view>
+
+    </view>
+
+  </view>
+
+  <!-- ========== 加载提示 ========== -->
+  <view wx:if="{{loading}}" class="loading-tip">
+    <text>加载中...</text>
+  </view>
+
+  <!-- ========== 分页控件 ========== -->
+  <view wx:if="{{!loading && totalPages > 0}}" class="pagination">
+    <view class="page-btn {{page <= 1 ? 'btn-disabled' : ''}}" bindtap="onPrevPage" hover-class="hover-btn" hover-stay-time="100">上一页</view>
+    <view class="page-info">{{page}} / {{totalPages}}</view>
+    <view class="page-btn {{page >= totalPages ? 'btn-disabled' : ''}}" bindtap="onNextPage" hover-class="hover-btn" hover-stay-time="100">下一页</view>
+  </view>
+
+  <!-- ========== 空状态 ========== -->
+  <view wx:if="{{!loading && list.length === 0}}" class="empty-state">
+    <!-- 品牌 SVG 插画：等待被点亮的星形徽章 + 星轨光环 -->
+    <view class="empty-illust">
+      <view class="empty-illust-orbit"></view>
+      <view class="empty-illust-orbit empty-illust-orbit-2"></view>
+      <view class="empty-illust-star">
+        <view class="empty-illust-star-inner">★</view>
+        <view class="empty-illust-star-shine"></view>
+      </view>
+      <text class="empty-illust-spark spark-1">✦</text>
+      <text class="empty-illust-spark spark-2">✦</text>
+      <text class="empty-illust-spark spark-3">•</text>
+      <text class="empty-illust-spark spark-4">•</text>
+    </view>
+    <view class="empty-title">{{activeTab === 'public' ? '收藏夹还是空的' : '自主题库还没有收藏'}}</view>
+    <view class="empty-text">{{activeTab === 'public' ? '刷题时点亮 ☆ 把重点题收藏到这里' : '去自主题库刷几题，遇到重点随手收藏'}}</view>
+    <view class="empty-tip-row">
+      <view class="empty-tip-dot"></view>
+      <text class="empty-hint">提示：点击题目右上角的 ☆ 一键加入收藏夹</text>
+    </view>
+  </view>
+
+</view>

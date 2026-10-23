@@ -1,0 +1,78 @@
+{
+  "lazyCodeLoading": "requiredComponents",
+  "pages": [
+    "pages/home/home",
+    "pages/quiz-setup/quiz-setup",
+    "pages/quiz/quiz",
+    "pages/rank/rank",
+    "pages/mine/mine",
+    "pages/wrong/wrong",
+    "pages/favorite/favorite",
+    "pages/about/about",
+    "pages/agreement/agreement",
+    "pages/settings/settings",
+    "pages/import/import",
+    "pages/custom/custom",
+    "pages/custom-list/custom-list",
+    "pages/review-select/review-select",
+    "pages/report/report"
+  ],
+  "subPackages": [
+    {
+      "root": "pages/upload",
+      "name": "upload-pkg",
+      "pages": ["upload"]
+    },
+    {
+      "root": "pages/code-bank",
+      "name": "code-pkg",
+      "pages": ["code-bank"]
+    },
+    {
+      "root": "pages/interview-bank",
+      "name": "interview-pkg",
+      "pages": ["interview-bank"]
+    }
+  ],
+  "preloadRule": {
+    "pages/home/home": {
+      "network": "all",
+      "packages": ["upload-pkg", "code-pkg", "interview-pkg"]
+    }
+  },
+  "window": {
+    "navigationBarTitleText": "一句刷",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f5f5",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#999999",
+    "selectedColor": "#1989fa",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "assets/tab-home-normal.png",
+        "selectedIconPath": "assets/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/rank/rank",
+        "text": "排行榜",
+        "iconPath": "assets/tab-rank-normal.png",
+        "selectedIconPath": "assets/tab-rank-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "assets/tab-mine-normal.png",
+        "selectedIconPath": "assets/tab-mine-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json"
+}

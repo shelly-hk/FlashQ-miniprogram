@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.WrongQuestionMapper">
+
+    <!-- 查询用户错题列表 -->
+    <select id="findByUserId" parameterType="int" resultType="com.flashq.entity.WrongQuestion">
+        SELECT * FROM wrong_question
+        WHERE user_id = #{userId}
+        ORDER BY last_wrong_time DESC
+    </select>
+
+    <!-- 查询用户错题列表（分页 + 可选按科目/题目类型筛选，JOIN question 表）
+         题库隔离规则：code 精确匹配；'all' 查看全部（错题本管理页用，排除面试题）；
+         其他（未传/it）只返回随机题库题目（排除 code/interview），保证三库互不干扰
+         注：面试题没有选项，不会产生错题，故一律不进入错题本 -->
+    <select id="findByUserIdPaged" resultType="com.flashq.entity.WrongQuestion">
+        SELECT wq.* FROM wrong_question wq
+        INNER JOIN question q ON wq.question_id = q.id
+        WHERE wq.user_id = #{userId}
+          AND q.is_deleted = 0
+        <if test="subjectId != null and subjectId > 0">
+          AND q.subject_id = #{subjectId}
+        </if>
+        <choose>
+          <when test="quizType == 'code'">
+            AND q.quiz_type = #{quizType}
+          </when>
+          <when test="quizType == 'all'">
+            <!-- 查看全部错题（排除面试题） -->
+            AND q.quiz_type != 'interview'
+          </when>
+          <otherwise>
+            AND (q.quiz_type IS NULL OR (q.quiz_type != 'code' AND q.quiz_type != 'interview'))
+          </otherwise>
+        </choose>
+        ORDER BY wq.last_wrong_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计用户错题总数（可选按科目/题目类型筛选，隔离规则同 findByUserIdPaged） -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM wrong_question wq
+        INNER JOIN question q ON wq.question_id = q.id
+        WHERE wq.user_id = #{userId}
+          AND q.is_deleted = 0
+        <if test="subjectId != null and subjectId > 0">
+          AND q.subject_id = #{subjectId}
+        </if>
+        <choose>
+          <when test="quizType == 'code'">
+            AND q.quiz_type = #{quizType}
+          </when>
+          <when test="quizType == 'all'">
+            <!-- 查看全部错题（排除面试题） -->
+            AND q.quiz_type != 'interview'
+          </when>
+          <otherwise>
+            AND (q.quiz_type IS NULL OR (q.quiz_type != 'code' AND q.quiz_type != 'interview'))
+          </otherwise>
+        </choose>
+    </select>
+
+    <!-- 按用户+题目查错题 -->
+    <select id="findByUserIdAndQuestionId" parameterType="map" resultType="com.flashq.entity.WrongQuestion">
+        SELECT * FROM wrong_question
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </select>
+
+    <!-- 新增错题记录 -->
+    <insert id="insert" parameterType="com.flashq.entity.WrongQuestion" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO wrong_question (user_id, question_id, user_answer, wrong_times, last_wrong_time)
+        VALUES (#{userId}, #{questionId}, #{userAnswer}, #{wrongTimes}, #{lastWrongTime})
+    </insert>
+
+    <!-- 更新错题次数 -->
+    <update id="updateWrongTimes" parameterType="com.flashq.entity.WrongQuestion">
+        UPDATE wrong_question
+        SET wrong_times = #{wrongTimes}, user_answer = #{userAnswer}, last_wrong_time = #{lastWrongTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除错题（按用户+题目） -->
+    <delete id="deleteByUserIdAndQuestionId">
+        DELETE FROM wrong_question
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </delete>
+
+</mapper>

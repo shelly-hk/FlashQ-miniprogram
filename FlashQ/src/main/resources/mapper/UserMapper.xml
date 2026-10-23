@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.UserMapper">
+
+    <!-- 根据 openid 查询用户 -->
+    <select id="findByOpenid" parameterType="string" resultType="com.flashq.entity.User">
+        SELECT * FROM `user`
+        WHERE openid = #{openid}
+    </select>
+
+    <!-- 根据 token 查询用户 -->
+    <select id="findByToken" parameterType="string" resultType="com.flashq.entity.User">
+        SELECT * FROM `user`
+        WHERE token = #{token}
+    </select>
+
+    <!-- 插入新用户（登录时不存在创建） -->
+    <insert id="insert" parameterType="com.flashq.entity.User" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `user` (openid, token, nick_no, total_count, today_count, last_study_date)
+        VALUES (#{openid}, #{token}, #{nickNo}, 0, 0, #{lastStudyDate})
+    </insert>
+
+    <!-- 更新用户计数等 -->
+    <update id="update" parameterType="com.flashq.entity.User">
+        UPDATE `user`
+        SET token = #{token},
+            nick_no = #{nickNo},
+            total_count = #{totalCount},
+            today_count = #{todayCount},
+            last_study_date = #{lastStudyDate}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新自定义刷题计数 -->
+    <update id="updateCustomStats">
+        UPDATE `user`
+        SET custom_total_count = #{totalCount},
+            custom_today_count = #{todayCount},
+            custom_last_study_date = #{lastStudyDate}
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 原子自增官方题库刷题计数（单条 SQL，自动处理跨天清零，规避并发竞态） -->
+    <update id="incrementStats">
+        UPDATE `user`
+        SET total_count = total_count + 1,
+            today_count = CASE WHEN last_study_date = #{today} THEN today_count + 1 ELSE 1 END,
+            last_study_date = #{today}
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 原子自增自定义题库刷题计数（单条 SQL，自动处理跨天清零，规避并发竞态） -->
+    <update id="incrementCustomStats">
+        UPDATE `user`
+        SET custom_total_count = custom_total_count + 1,
+            custom_today_count = CASE WHEN custom_last_study_date = #{today} THEN custom_today_count + 1 ELSE 1 END,
+            custom_last_study_date = #{today}
+        WHERE id = #{userId}
+    </update>
+
+    <!-- 排行榜 Top100（总排名，过滤零刷题用户） -->
+    <select id="findTopRank" resultType="com.flashq.entity.User">
+        SELECT * FROM `user`
+        WHERE total_count > 0
+        ORDER BY total_count DESC
+        LIMIT 100
+    </select>
+
+    <!-- 排行榜 Top100（今日排名） -->
+    <select id="findTopTodayRank" resultType="com.flashq.entity.User">
+        SELECT * FROM `user`
+        WHERE today_count > 0 AND last_study_date = CURDATE()
+        ORDER BY today_count DESC
+        LIMIT 100
+    </select>
+
+    <!-- 用户总排名 -->
+    <select id="countRankByUser" parameterType="int" resultType="int">
+        SELECT COUNT(*) + 1 FROM `user`
+        WHERE total_count > (SELECT total_count FROM `user` WHERE id = #{userId})
+    </select>
+
+    <!-- 用户今日排名 -->
+    <select id="countTodayRankByUser" parameterType="int" resultType="int">
+        SELECT COUNT(*) + 1 FROM `user`
+        WHERE today_count > (SELECT today_count FROM `user` WHERE id = #{userId})
+          AND last_study_date = CURDATE()
+    </select>
+
+    <select id="findById" parameterType="int" resultType="com.flashq.entity.User">
+        SELECT
+            id,
+            openid,
+            token,
+            nick_no,
+            avatar,
+            total_count,
+            today_count,
+            last_study_date,
+            custom_total_count,
+            custom_today_count,
+            custom_last_study_date,
+            create_time,
+            update_time
+        FROM `user`
+        WHERE id = #{id}
+    </select>
+
+    <!-- 更新昵称 -->
+    <update id="updateNickName">
+        UPDATE `user` SET nick_no = #{nickName} WHERE id = #{userId}
+    </update>
+
+    <!-- 更新头像 -->
+    <update id="updateAvatar">
+        UPDATE `user` SET avatar = #{avatar} WHERE id = #{userId}
+    </update>
+
+    <!-- 刷新用户活跃时间（登录续期，防止 token 因 update_time 过旧被拦截） -->
+    <update id="updateLoginTime">
+        UPDATE `user` SET update_time = NOW() WHERE id = #{userId}
+    </update>
+
+    <!-- 标记客户端学习报告数据已完成迁移（report/migrate 幂等控制） -->
+    <update id="updateReportMigratedAt">
+        UPDATE `user` SET report_migrated_at = NOW() WHERE id = #{userId}
+    </update>
+
+</mapper>

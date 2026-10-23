@@ -1,0 +1,113 @@
+<!--
+  上传出题页
+  --------------------------------------------------
+  功能：
+    1. 查询今日上传配额（每日30次免费）
+    2. 选择图片、文档或粘贴文本上传
+    3. 上传成功后注册到全局后台轮询，用户可离开本页
+    4. AI 生成完成后通过全局弹窗通知用户
+-->
+
+<view class="upload-page {{darkMode ? 'dark' : ''}} font-{{fontScale}}">
+
+  <!-- ========== 配额信息 ========== -->
+  <view class="quota-card">
+    <view class="quota-title">今日上传次数</view>
+    <view class="quota-numbers">
+      <text class="quota-remaining">{{quota.remaining}}</text>
+      <text class="quota-divider">/</text>
+      <text class="quota-total">{{quota.dailyLimit}}</text>
+    </view>
+    <view class="quota-bar">
+      <view class="quota-bar-fill" style="width: {{quota.remaining / quota.dailyLimit * 100}}%"></view>
+    </view>
+    <view class="quota-hint">剩余 {{quota.remaining}} 次，每日 00:00 重置</view>
+  </view>
+
+  <!-- ========== 上传区域 ========== -->
+  <view wx:if="{{!uploading}}" class="upload-area">
+
+    <view class="upload-option" bindtap="onChooseImage" hover-class="hover-card" hover-stay-time="100">
+      <view class="upload-icon">🖼</view>
+      <view class="upload-text">
+        <text class="upload-label">上传图片</text>
+        <text class="upload-desc">jpg / png / webp，最大 5MB</text>
+      </view>
+    </view>
+    <view class="upload-option" bindtap="onChooseFile" hover-class="hover-card" hover-stay-time="100">
+      <view class="upload-icon">📄</view>
+      <view class="upload-text">
+        <text class="upload-label">上传文档</text>
+        <text class="upload-desc">pdf / doc / docx / txt，最大 1MB</text>
+      </view>
+    </view>
+    <view class="upload-option" bindtap="onShowTextInput" hover-class="hover-card" hover-stay-time="100">
+      <view class="upload-icon">📝</view>
+      <view class="upload-text">
+        <text class="upload-label">粘贴文本</text>
+        <text class="upload-desc">直接粘贴文本内容，AI 识别生成题目</text>
+      </view>
+    </view>
+    <view class="upload-option upload-import" bindtap="onGoImport" hover-class="hover-card" hover-stay-time="100">
+      <view class="upload-icon">📥</view>
+      <view class="upload-text">
+        <text class="upload-label">导入题目</text>
+        <text class="upload-desc">按格式规范批量导入，无需 AI，即时生效</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 粘贴文本输入区域 ========== -->
+  <view wx:if="{{!uploading && showTextInput}}" class="text-input-area">
+    <view class="text-input-header">
+      <text class="text-input-title">粘贴文本生成题目</text>
+      <text class="text-input-close" bindtap="onCloseTextInput">✕</text>
+    </view>
+    <textarea
+      class="text-input-box"
+      placeholder="粘贴或输入题目相关的文本内容..."
+      placeholder-class="text-input-placeholder"
+      value="{{textInputValue}}"
+      bindinput="onTextInput"
+      maxlength="5000"
+      auto-height
+      style="min-height: 240rpx;"
+    ></textarea>
+    <view class="text-input-footer">
+      <text class="text-input-count">{{textInputValue.length}} / 5000</text>
+      <view class="text-input-btn {{textInputValue ? '' : 'btn-disabled'}}" bindtap="onSubmitText" hover-class="hover-btn" hover-stay-time="100">生成题目</view>
+    </view>
+  </view>
+
+  <!-- ========== 上传中 ========== -->
+  <view wx:if="{{uploading}}" class="status-card">
+    <view class="status-icon uploading">⬆</view>
+    <text class="status-text">正在上传文件...</text>
+    <text class="status-hint">{{uploadFileName}}</text>
+  </view>
+
+  <!-- ========== 说明 ========== -->
+  <view wx:if="{{!uploading}}" class="upload-tips">
+    <view class="tip-title">使用说明</view>
+    <view class="tip-item">· 上传后 AI 自动在后台生成题目，完成后弹窗通知你</view>
+    <view class="tip-item">· 上传后可返回做其他操作（刷题、再上传），不影响生成</view>
+    <view class="tip-item">· 每次上传可生成的题目数量取决于文档内容</view>
+    <view class="tip-item">· 生成的题目仅你自己可见，可在自主题库中刷题</view>
+    <view class="tip-item">· 每天免费 30 次，00:00 重置</view>
+  </view>
+
+  <!-- ========== 隐私授权弹窗 ========== -->
+  <view wx:if="{{showPrivacy}}" class="privacy-mask">
+    <view class="privacy-card">
+      <view class="privacy-title">隐私保护提示</view>
+      <view class="privacy-desc">
+        在使用上传功能前，请仔细阅读<text class="privacy-link" bindtap="onOpenPrivacyContract">《用户隐私保护指引》</text>。上传的文件仅用于生成题目，不会用于其他用途。
+      </view>
+      <view class="privacy-buttons">
+        <view class="privacy-btn-disagree" bindtap="handleDisagreePrivacy">拒绝</view>
+        <button id="agree-btn" class="privacy-btn-agree" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="handleAgreePrivacy">同意并继续</button>
+      </view>
+    </view>
+  </view>
+
+</view>

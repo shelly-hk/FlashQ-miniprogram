@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.flashq.mapper.FavoriteMapper">
+
+    <!-- 查询某用户的收藏列表 -->
+    <select id="findByUserId" parameterType="int" resultType="com.flashq.entity.Favorite">
+        SELECT * FROM favorite
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询某用户的收藏列表（分页 + 可选按科目/题目类型筛选，JOIN question 表）
+         题库隔离规则：code/interview 精确匹配；'all' 查看全部（收藏夹管理页用）；
+         其他（未传/it）只返回随机题库题目（排除 code/interview），保证三库互不干扰 -->
+    <select id="findByUserIdPaged" resultType="com.flashq.entity.Favorite">
+        SELECT f.* FROM favorite f
+        INNER JOIN question q ON f.question_id = q.id
+        WHERE f.user_id = #{userId}
+          AND q.is_deleted = 0
+        <if test="subjectId != null and subjectId > 0">
+          AND q.subject_id = #{subjectId}
+        </if>
+        <choose>
+          <when test="quizType == 'code' or quizType == 'interview'">
+            AND q.quiz_type = #{quizType}
+          </when>
+          <when test="quizType == 'all'">
+            <!-- 查看全部收藏（不按类型过滤） -->
+          </when>
+          <otherwise>
+            AND (q.quiz_type IS NULL OR (q.quiz_type != 'code' AND q.quiz_type != 'interview'))
+          </otherwise>
+        </choose>
+        ORDER BY f.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 统计用户收藏总数（可选按科目/题目类型筛选，隔离规则同 findByUserIdPaged） -->
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM favorite f
+        INNER JOIN question q ON f.question_id = q.id
+        WHERE f.user_id = #{userId}
+          AND q.is_deleted = 0
+        <if test="subjectId != null and subjectId > 0">
+          AND q.subject_id = #{subjectId}
+        </if>
+        <choose>
+          <when test="quizType == 'code' or quizType == 'interview'">
+            AND q.quiz_type = #{quizType}
+          </when>
+          <when test="quizType == 'all'">
+            <!-- 查看全部收藏（不按类型过滤） -->
+          </when>
+          <otherwise>
+            AND (q.quiz_type IS NULL OR (q.quiz_type != 'code' AND q.quiz_type != 'interview'))
+          </otherwise>
+        </choose>
+    </select>
+
+    <!-- 判断是否已收藏 -->
+    <select id="countByUserAndQuestion" resultType="int">
+        SELECT COUNT(*) FROM favorite
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </select>
+
+    <!-- 新增收藏 -->
+    <insert id="insert" parameterType="com.flashq.entity.Favorite" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO favorite (user_id, question_id)
+        VALUES (#{userId}, #{questionId})
+    </insert>
+
+    <!-- 删除收藏（按用户+题目） -->
+    <delete id="deleteByUserIdAndQuestionId">
+        DELETE FROM favorite
+        WHERE user_id = #{userId} AND question_id = #{questionId}
+    </delete>
+
+    <!-- 删除某题（清理用） -->
+    <delete id="deleteByQuestionId" parameterType="int">
+        DELETE FROM favorite WHERE question_id = #{questionId}
+    </delete>
+
+</mapper>
